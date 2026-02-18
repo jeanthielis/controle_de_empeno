@@ -125,17 +125,13 @@ createApp({
         };
 
         // ==========================================
-        // 4. MÁSCARA E DIGITAÇÃO (3 DÍGITOS REAIS)
+        // 4. MÁSCARA INTELIGENTE (3 dígitos reais)
         // ==========================================
         const mascararInput = (event, pecaObj, tipo, chave) => {
             let input = event.target;
             let valorOriginal = input.value;
             let isNegative = valorOriginal.includes('-');
-            
-            // Pega apenas números
             let numeros = valorOriginal.replace(/\D/g, '');
-            
-            // Remove zeros à esquerda para contar dígitos reais (1,50 -> 150 -> length 3)
             let digitosReais = numeros.replace(/^0+/, '');
 
             let valorVisual = '';
@@ -146,7 +142,6 @@ createApp({
                 valorVisual = valorFloat.toFixed(2).replace('.', ',');
             }
             if (isNegative) { valorVisual = '-' + valorVisual; valorFloat = valorFloat * -1; }
-            
             if (numeros.length === 0 && !isNegative) { valorVisual = ''; valorFloat = null; } 
             else if (numeros.length === 0 && isNegative) { valorVisual = '-'; }
 
@@ -159,11 +154,7 @@ createApp({
             }
             input.value = valorVisual;
 
-            // Pula se tiver 3 ou mais dígitos reais
-            if (digitosReais.length >= 3) {
-                focarProximoInput(input);
-            }
-            
+            if (digitosReais.length >= 3) focarProximoInput(input);
             salvarRascunho();
         };
 
@@ -212,44 +203,55 @@ createApp({
             if(currentInspectionId.value) await updateDoc(doc(db, "inspecoes", currentInspectionId.value), { status: 'finalizado' });
 
             const now = new Date();
-            
-            // --- NOVO FORMATO DE RELATÓRIO WHATSAPP ---
-            let txt = `*RELATÓRIO DE EMPENO*\n`;
-            txt += `*Data:* ${now.toLocaleDateString()} ${now.toLocaleTimeString().slice(0,5)}\n`;
-            txt += `*Responsável:* ${loginData.value.user}\n`;
-            
-            // Pós Folga condicional
+            const dataStr = now.toLocaleDateString('pt-BR');
+            const conf = configAtiva.value;
+
+            // --- CONSTRUÇÃO DO TEXTO (Formato da Imagem) ---
+            let txt = `*Responsável:* ${loginData.value.user}\n`;
+            // txt += `*Equipe:* (Não informado)\n`; // Se quiser adicionar equipe depois
+            txt += `*Data:* ${dataStr}\n\n`;
+
+            txt += `*Referencia:* ${form.value.produto}\n`;
+            txt += `*Lote:* ${form.value.lote}\n`;
+            txt += `*Linha:* ${form.value.linha}\n`;
+            // Adicionando Formato e Pós Folga condicional
+            txt += `*Formato:* ${conf.nome}\n`;
             if (form.value.posFolga === 'Sim') {
                 txt += `*Pós Folga:* Sim\n`;
             }
+            txt += `\n`;
 
-            txt += `*Linha:* ${form.value.linha}\n`;
-            txt += `*Produto:* ${form.value.produto}\n`;
-            txt += `*Formato:* ${configAtiva.value.nome}\n`;
-            txt += `*Lote:* ${form.value.lote}\n`;
-            txt += `--------------------------------\n`;
+            // Ranges
+            txt += `Range Lateral:(${conf.latMin} a ${conf.latMax})\n`;
+            txt += `Range Central:(${conf.centMin} a ${conf.centMax})\n\n`;
 
             form.value.pecas.forEach((p, i) => {
-                txt += `\n*P${i+1}* `;
+                txt += `*Peça ${i+1}*\n`;
                 
-                const l = Object.entries(p.laterais)
-                    .filter(([_,v]) => v != null && v !== '')
-                    .map(([k,v]) => {
-                        // Bolinha Verde ou Vermelha
-                        const icon = getStatusClass(v,'lateral') === 'status-ok' ? '🟢' : '🔴';
-                        return `${icon} ${k}:${v}`;
-                    }).join('  ');
-                
-                const c = Object.entries(p.centrais)
-                    .filter(([_,v]) => v != null && v !== '')
-                    .map(([k,v]) => {
-                        // Bolinha Verde ou Vermelha
-                        const icon = getStatusClass(v,'central') === 'status-ok' ? '🟢' : '🔴';
-                        return `${icon} C${k}:${v}`;
-                    }).join('  ');
-                
-                if(l) txt += `\nL: ${l}`; 
-                if(c) txt += `\nC: ${c}`;
+                // Laterais (Lado A, B, C, D)
+                ['A', 'B', 'C', 'D'].forEach(lado => {
+                    const val = p.laterais[lado];
+                    const visual = p.lateraisDisplay[lado];
+                    if (val !== null && val !== '') {
+                        const icon = getStatusClass(val, 'lateral') === 'status-ok' ? '🟢' : '🔴';
+                        txt += `${icon} Lado ${lado}: ${visual}\n`;
+                    }
+                });
+
+                // Centrais
+                txt += `*Central*\n`;
+                [1, 2].forEach(num => {
+                    const val = p.centrais[num];
+                    const visual = p.centraisDisplay[num];
+                    // Mapeia 1 -> Lado A, 2 -> Lado B para ficar igual a foto
+                    const label = num === 1 ? 'Lado A' : 'Lado B';
+                    
+                    if (val !== null && val !== '') {
+                        const icon = getStatusClass(val, 'central') === 'status-ok' ? '🟢' : '🔴';
+                        txt += `${icon} ${label}: ${visual}\n`;
+                    }
+                });
+                txt += `\n`;
             });
 
             reportText.value = txt;
