@@ -45,12 +45,18 @@
                 <form @submit.prevent="handleLogin" class="space-y-4">
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Usuário</label>
-                        <input type="text" v-model="loginData.user" class="input-clean w-full" placeholder="nome.sobrenome">
+                        <input type="text" v-model="loginData.user" @input="loginData.user = loginData.user.toLowerCase()" class="input-clean w-full lowercase" placeholder="nome.sobrenome">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Senha (Matrícula)</label>
                         <input type="password" v-model="loginData.pass" class="input-clean w-full" placeholder="••••••••">
                     </div>
+                    
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" v-model="loginData.remember" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                        <span class="text-sm text-gray-600">Manter conectado</span>
+                    </label>
+
                     <button type="submit" class="btn-primary w-full py-3">
                         <span v-if="loading">Acessando...</span>
                         <span v-else>Entrar</span>
@@ -329,7 +335,8 @@
                         </div>
                     </div>
 
-                    <input v-model="form.lote" @change="salvarRascunho" class="input-clean uppercase" placeholder="LOTE">
+                    <input v-model="form.lote" @input="form.lote = form.lote.toUpperCase()" class="input-clean uppercase font-bold" placeholder="LOTE">
+                    
                     <select v-model="form.posFolga" @change="salvarRascunho" class="input-clean border-blue-300 bg-blue-50 font-medium text-blue-800">
                         <option value="">Pós Folga? *</option>
                         <option value="Sim">Sim</option>
@@ -388,9 +395,12 @@
                 </div>
             </main>
             
-            <footer class="fixed bottom-0 left-0 right-0 bg-white p-4 border-t flex justify-center z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
-                <button @click="gerarRelatorioFinal" class="btn-primary w-full max-w-sm py-3 text-lg shadow-lg">Concluir Inspeção</button>
-            </footer>
+            <div class="fixed bottom-6 left-0 right-0 flex justify-center z-50 pointer-events-none">
+                <button @click="gerarRelatorioFinal" class="pointer-events-auto bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 py-4 shadow-2xl flex items-center gap-3 transition-transform hover:scale-105 active:scale-95">
+                    <i class="ph-fill ph-check-circle text-2xl"></i>
+                    <span class="font-bold text-lg">Concluir Inspeção</span>
+                </button>
+            </div>
         </div>
 
         <div v-if="reportText" class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
