@@ -6,7 +6,6 @@ import {
 
 createApp({
     setup() {
-        // --- Notificações ---
         const notificacoes = ref([]);
         const notify = (titulo, mensagem, tipo = 'info') => {
             const id = Date.now();
@@ -14,7 +13,6 @@ createApp({
             setTimeout(() => notificacoes.value = notificacoes.value.filter(n => n.id !== id), 4000);
         };
 
-        // --- Dark Mode ---
         const isDarkMode = ref(false);
         const toggleDarkMode = () => {
             isDarkMode.value = !isDarkMode.value;
@@ -27,39 +25,29 @@ createApp({
             }
         };
 
-        // --- Estado Global ---
         const currentView = ref('login'); 
         const loginData = ref({ user: '', pass: '', remember: false });
         const loading = ref(false);
         const salvandoAuto = ref(false);
         const relatorioSelecionado = ref(null);
         
-        // --- Admin Data ---
         const adminTab = ref('dashboard'); 
-        const mobileMenuOpen = ref(false); // Variável que estava faltando no return
-        const filtros = ref({ data: '', produto: '', lote: '' });
+        const mobileMenuOpen = ref(false); 
+        // Filtros Atualizados
+        const filtros = ref({ data: '', produto: '', lote: '', posFolga: '' });
         const filtroAdminProdutos = ref(''); 
         const novoUsuarioForm = ref({ nome: '', matricula: '', admin: false });
         const cadastros = ref({ formatos: [], produtos: [], linhas: [], inspecoes: [], usuarios: [] });
 
-        // --- Inspetor Data ---
         const currentInspectionId = ref(null);
         const produtoSearch = ref('');
         const mostrandoListaProdutos = ref(false);
         const form = ref({ linha: '', formatoId: '', produto: '', lote: '', posFolga: '', pecas: [] });
         const reportText = ref('');
 
-        // ==========================================
-        // 1. NAVEGAÇÃO
-        // ==========================================
-        const navigateAdmin = (tab) => {
-            adminTab.value = tab;
-            mobileMenuOpen.value = false; // Fecha o menu ao clicar
-        };
+        const navigateAdmin = (tab) => { adminTab.value = tab; mobileMenuOpen.value = false; };
 
-        // ==========================================
-        // 2. DASHBOARD ESTATÍSTICAS
-        // ==========================================
+        // --- DASHBOARD E FILTROS ---
         const stats = computed(() => {
             const lista = cadastros.value.inspecoes;
             const hoje = new Date().toLocaleDateString('pt-BR');
@@ -76,38 +64,58 @@ createApp({
                 const matchProduto = filtros.value.produto ? item.produto?.toLowerCase().includes(filtros.value.produto.toLowerCase()) : true;
                 const matchLote = filtros.value.lote ? item.lote?.toLowerCase().includes(filtros.value.lote.toLowerCase()) : true;
                 const matchData = filtros.value.data ? formatarData(item.dataHora).includes(formatarDataInput(filtros.value.data)) : true;
-                return matchProduto && matchLote && matchData;
+                // Novo Filtro Pós Folga
+                const matchPosFolga = filtros.value.posFolga ? item.posFolga === filtros.value.posFolga : true;
+                return matchProduto && matchLote && matchData && matchPosFolga;
             }).sort((a,b) => b.dataHora - a.dataHora);
         });
 
-        // ==========================================
-        // 3. BUSCA E FILTROS
-        // ==========================================
         const produtosFiltrados = computed(() => {
             if (!produtoSearch.value) return cadastros.value.produtos;
             return cadastros.value.produtos.filter(p => p.nome.toLowerCase().includes(produtoSearch.value.toLowerCase()));
         });
 
-        const selecionarProduto = (nome) => {
-            form.value.produto = nome; produtoSearch.value = nome; mostrandoListaProdutos.value = false; salvarRascunho();
+        const selecionarProduto = (nome) => { form.value.produto = nome; produtoSearch.value = nome; mostrandoListaProdutos.value = false; salvarRascunho(); };
+        const produtosAdminFiltrados = computed(() => { if (!filtroAdminProdutos.value) return cadastros.value.produtos; return cadastros.value.produtos.filter(p => p.nome.toLowerCase().includes(filtroAdminProdutos.value.toLowerCase())); });
+
+        // --- ADMIN EDIT ---
+        const salvarAlteracoesAdmin = async () => {
+            if (!relatorioSelecionado.value) return;
+            const rel = relatorioSelecionado.value;
+            
+            // Recalcula Resultado (Aprovado/Reprovado)
+            let novoResultado = 'Aprovado';
+            rel.pecas.forEach(p => {
+                // Checa Laterais
+                Object.values(p.laterais).forEach(v => {
+                    if (!getStatusRelatorio(rel, v, 'lateral')) novoResultado = 'Reprovado';
+                });
+                // Checa Centrais
+                Object.values(p.centrais).forEach(v => {
+                    if (!getStatusRelatorio(rel, v, 'central')) novoResultado = 'Reprovado';
+                });
+            });
+            rel.resultado = novoResultado;
+
+            try {
+                await updateDoc(doc(db, "inspecoes", rel.id), {
+                    pecas: rel.pecas,
+                    resultado: novoResultado
+                });
+                notify('Salvo', 'Relatório atualizado com sucesso.', 'sucesso');
+                relatorioSelecionado.value = null; // Fecha modal
+            } catch (e) {
+                notify('Erro', 'Falha ao salvar edição.', 'erro');
+            }
         };
 
-        const produtosAdminFiltrados = computed(() => {
-            if (!filtroAdminProdutos.value) return cadastros.value.produtos;
-            return cadastros.value.produtos.filter(p => p.nome.toLowerCase().includes(filtroAdminProdutos.value.toLowerCase()));
-        });
-
-        // ==========================================
-        // 4. LOGIN
-        // ==========================================
+        // --- CORE ---
         const handleLogin = () => {
             loading.value = true;
             setTimeout(() => {
                 const { user, pass, remember } = loginData.value;
                 const userLower = user.toLowerCase(); 
-                if (userLower === 'admin' && pass === 'admin') {
-                    currentView.value = 'admin'; notify('Super Admin', 'Acesso de emergência.', 'sucesso'); loading.value = false; return;
-                }
+                if (userLower === 'admin' && pass === 'admin') { currentView.value = 'admin'; notify('Super Admin', 'Acesso de emergência.', 'sucesso'); loading.value = false; return; }
                 const usuarioEncontrado = cadastros.value.usuarios.find(u => u.login === userLower && u.matricula === pass);
                 if (usuarioEncontrado) {
                     if (remember) { localStorage.setItem('qc_user', userLower); localStorage.setItem('qc_pass', pass); } 
@@ -132,9 +140,6 @@ createApp({
             catch (e) { notify('Erro', e.message, 'erro'); }
         };
 
-        // ==========================================
-        // 5. INPUT E LÓGICA (3 DIGITOS)
-        // ==========================================
         const mascararInput = (event, pecaObj, tipo, chave) => {
             let input = event.target;
             let valorOriginal = input.value;
@@ -142,16 +147,13 @@ createApp({
             let numeros = valorOriginal.replace(/\D/g, '');
             let digitosReais = numeros.replace(/^0+/, '');
             let valorVisual = ''; let valorFloat = 0;
-
             if (numeros.length > 0) { valorFloat = parseInt(numeros) / 100; valorVisual = valorFloat.toFixed(2).replace('.', ','); }
             if (isNegative) { valorVisual = '-' + valorVisual; valorFloat = valorFloat * -1; }
             if (numeros.length === 0 && !isNegative) { valorVisual = ''; valorFloat = null; } 
             else if (numeros.length === 0 && isNegative) { valorVisual = '-'; }
-
             if (tipo === 'laterais') { pecaObj.lateraisDisplay[chave] = valorVisual; pecaObj.laterais[chave] = valorFloat; } 
             else { pecaObj.centraisDisplay[chave] = valorVisual; pecaObj.centrais[chave] = valorFloat; }
             input.value = valorVisual;
-
             if (digitosReais.length >= 3) focarProximoInput(input);
             salvarRascunho();
         };
@@ -174,10 +176,7 @@ createApp({
             if (!form.value.posFolga) { notify('Atenção', 'Preencha se é Pós Folga.', 'erro'); return; }
             await salvarRascunho(); 
             if(currentInspectionId.value) await updateDoc(doc(db, "inspecoes", currentInspectionId.value), { status: 'finalizado' });
-
-            const now = new Date();
-            const dataStr = now.toLocaleDateString('pt-BR');
-            const conf = configAtiva.value;
+            const now = new Date(); const dataStr = now.toLocaleDateString('pt-BR'); const conf = configAtiva.value;
             let txt = `*RELATÓRIO DE EMPENO*\n*Data:* ${dataStr} ${now.toLocaleTimeString().slice(0,5)}\n*Responsável:* ${loginData.value.user}\n`;
             if (form.value.posFolga === 'Sim') txt += `*Pós Folga:* Sim\n`;
             txt += `*Linha:* ${form.value.linha}\n*Produto:* ${form.value.produto}\n*Formato:* ${conf.nome}\n*Lote:* ${form.value.lote}\n\nRange Lateral:(${conf.latMin} a ${conf.latMax})\nRange Central:(${conf.centMin} a ${conf.centMax})\n\n`;
@@ -191,8 +190,15 @@ createApp({
             reportText.value = txt; notify('Sucesso', 'Relatório gerado.', 'sucesso');
         };
 
-        // --- HELPERS ---
-        const getStatusRelatorio = (relatorio, valor, tipo) => { if (valor === null || valor === undefined || valor === '') return true; const num = parseFloat(valor); const limites = relatorio.limitesSnapshot || cadastros.value.formatos.find(f => f.id === relatorio.formatoId) || { latMin: -99, latMax: 99, centMin: -99, centMax: 99 }; const min = tipo === 'lateral' ? limites.latMin : limites.centMin; const max = tipo === 'lateral' ? limites.latMax : limites.centMax; return (num >= min && num <= max); };
+        const getStatusRelatorio = (relatorio, valor, tipo) => { 
+            if (valor === null || valor === undefined || valor === '') return true; 
+            const num = parseFloat(valor); 
+            // Usa snapshot salvo ou formato atual
+            const limites = relatorio.limitesSnapshot || cadastros.value.formatos.find(f => f.id === relatorio.formatoId) || { latMin: -99, latMax: 99, centMin: -99, centMax: 99 }; 
+            const min = tipo === 'lateral' ? limites.latMin : limites.centMin; 
+            const max = tipo === 'lateral' ? limites.latMax : limites.centMax; 
+            return (num >= min && num <= max); 
+        };
         const configAtiva = computed(() => cadastros.value.formatos.find(f => f.id === form.value.formatoId) || { nome: '...', latMin: -99, latMax: 99, centMin: -99, centMax: 99 });
         const getStatusClass = (val, tipo) => { if (val == null || val === '') return ''; const min = tipo === 'lateral' ? configAtiva.value.latMin : configAtiva.value.centMin; const max = tipo === 'lateral' ? configAtiva.value.latMax : configAtiva.value.centMax; return (val >= min && val <= max) ? 'status-ok' : 'status-bad'; };
         const focarProximoInput = (el) => { const inputs = Array.from(document.querySelectorAll('.input-medicao')); const idx = inputs.indexOf(el); if (idx > -1 && idx < inputs.length - 1) inputs[idx + 1].focus(); };
@@ -201,7 +207,7 @@ createApp({
         const formatarData = (ts) => ts && ts.seconds ? new Date(ts.seconds * 1000).toLocaleDateString('pt-BR') : '-';
         const formatarDataInput = (d) => d ? d.split('-').reverse().join('/') : '';
         const abrirDetalhesRelatorio = (r) => relatorioSelecionado.value = r;
-        const limparFiltros = () => filtros.value = { data: '', produto: '', lote: '' };
+        const limparFiltros = () => filtros.value = { data: '', produto: '', lote: '', posFolga: '' };
         const logout = () => { currentView.value = 'login'; loginData.value = { user: '', pass: '', remember: false }; localStorage.removeItem('qc_user'); localStorage.removeItem('qc_pass'); };
         const novaInspecaoLimpa = () => { reportText.value = ''; currentInspectionId.value = null; form.value.pecas = []; form.value.lote = ''; form.value.posFolga = ''; form.value.produto = ''; produtoSearch.value = ''; adicionarPeca(); };
         const novoFormato = async () => { const n = prompt("Nome:"); if(n) addDoc(collection(db,"formatos"), {nome:n, latMin:-0.5, latMax:0.5, centMin:-1, centMax:1}); };
@@ -230,12 +236,10 @@ createApp({
             onSnapshot(query(collection(db, "inspecoes"), orderBy("dataHora", "desc")), s => cadastros.value.inspecoes = s.docs.map(d=>({id:d.id,...d.data()})));
         });
 
-        // --- RETORNO CORRIGIDO ---
         return {
             notificacoes, salvandoAuto, currentView, loginData, handleLogin, logout, loading,
-            adminTab, mobileMenuOpen, navigateAdmin, // ADICIONADO AQUI
-            cadastros, filtros, relatoriosFiltrados, limparFiltros,
-            relatorioSelecionado, abrirDetalhesRelatorio, getStatusRelatorio,
+            adminTab, mobileMenuOpen, navigateAdmin, cadastros, filtros, relatoriosFiltrados, limparFiltros,
+            relatorioSelecionado, abrirDetalhesRelatorio, getStatusRelatorio, salvarAlteracoesAdmin,
             form, mascararInput, getStatusClass, adicionarPeca, removerPeca, salvarRascunho, gerarRelatorioFinal, reportText, novaInspecaoLimpa,
             novoFormato, novoItemSimples, removerItem, atualizarFormato, atualizarItemSimples,
             formatarData, copiarTexto, enviarZap, stats, novoUsuarioForm, cadastrarUsuario,
