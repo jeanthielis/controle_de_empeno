@@ -5,6 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>QualityControl | Sistema de Empeno</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class', // Habilita modo escuro manual
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            bg: '#0f172a',
+                            surface: '#1e293b',
+                            border: '#334155',
+                            text: '#f1f5f9',
+                            input: '#020617'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script type="importmap">
         {
@@ -16,45 +34,56 @@
         }
     </script>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Ajuste fino para scrollbar no dark mode */
+        .dark ::-webkit-scrollbar-track { background: #0f172a; }
+        .dark ::-webkit-scrollbar-thumb { background: #334155; }
+    </style>
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans antialiased overflow-hidden">
+<body class="bg-gray-50 text-gray-800 dark:bg-dark-bg dark:text-dark-text font-sans antialiased overflow-hidden transition-colors duration-300">
 
     <div id="app" v-cloak class="h-screen flex flex-col relative">
         
-        <div class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 w-full max-w-sm pointer-events-none">
+        <button @click="toggleDarkMode" class="fixed top-4 right-4 z-[100] p-2 rounded-full bg-white dark:bg-dark-surface shadow-md border dark:border-dark-border text-gray-600 dark:text-yellow-400 hover:scale-110 transition-transform">
+            <i v-if="isDarkMode" class="ph-fill ph-sun text-xl"></i>
+            <i v-else class="ph-fill ph-moon text-xl text-blue-600"></i>
+        </button>
+
+        <div class="fixed top-16 right-4 z-[9999] flex flex-col gap-2 w-full max-w-sm pointer-events-none">
             <transition-group name="toast">
                 <div v-for="notif in notificacoes" :key="notif.id" 
-                     :class="['pointer-events-auto p-4 rounded-xl shadow-xl border flex items-center gap-3 transform transition-all duration-300 bg-white', 
-                              notif.tipo === 'sucesso' ? 'border-green-500 text-green-700' : 
-                              notif.tipo === 'erro' ? 'border-red-500 text-red-700' : 'border-blue-500 text-blue-700']">
+                     :class="['pointer-events-auto p-4 rounded-xl shadow-xl border flex items-center gap-3 transform transition-all duration-300', 
+                              isDarkMode ? 'bg-dark-surface border-dark-border' : 'bg-white',
+                              notif.tipo === 'sucesso' ? 'text-green-600 border-green-500' : 
+                              notif.tipo === 'erro' ? 'text-red-500 border-red-500' : 'text-blue-500 border-blue-500']">
                     <i class="ph-fill ph-info text-2xl"></i>
-                    <div><h4 class="font-bold text-sm">{{ notif.titulo }}</h4><p class="text-xs">{{ notif.mensagem }}</p></div>
+                    <div><h4 class="font-bold text-sm">{{ notif.titulo }}</h4><p class="text-xs opacity-90">{{ notif.mensagem }}</p></div>
                 </div>
             </transition-group>
         </div>
 
-        <div v-if="currentView === 'login'" class="flex-1 flex items-center justify-center bg-gray-100 px-4">
-            <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100">
+        <div v-if="currentView === 'login'" class="flex-1 flex items-center justify-center px-4">
+            <div class="bg-white dark:bg-dark-surface p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100 dark:border-dark-border transition-colors">
                 <div class="text-center mb-6">
-                    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 mb-4">
+                    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300 mb-4">
                         <i class="ph ph-hexagon text-2xl"></i>
                     </div>
-                    <h1 class="text-2xl font-bold text-gray-900">QualityControl</h1>
-                    <p class="text-xs text-gray-500">Sistema de Gestão de Qualidade</p>
+                    <h1 class="text-2xl font-bold">QualityControl</h1>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Sistema de Gestão de Qualidade</p>
                 </div>
                 <form @submit.prevent="handleLogin" class="space-y-4">
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Usuário</label>
-                        <input type="text" v-model="loginData.user" @input="loginData.user = loginData.user.toLowerCase()" class="input-clean w-full lowercase" placeholder="nome.sobrenome">
+                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Usuário</label>
+                        <input type="text" v-model="loginData.user" @input="loginData.user = loginData.user.toLowerCase()" class="input-clean lowercase" placeholder="nome.sobrenome">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Senha (Matrícula)</label>
-                        <input type="password" v-model="loginData.pass" class="input-clean w-full" placeholder="••••••••">
+                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Senha (Matrícula)</label>
+                        <input type="password" v-model="loginData.pass" class="input-clean" placeholder="••••••••">
                     </div>
                     
                     <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" v-model="loginData.remember" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
-                        <span class="text-sm text-gray-600">Manter conectado</span>
+                        <input type="checkbox" v-model="loginData.remember" class="w-4 h-4 text-blue-600 rounded dark:bg-dark-input dark:border-dark-border">
+                        <span class="text-sm text-gray-600 dark:text-gray-300">Manter conectado</span>
                     </label>
 
                     <button type="submit" class="btn-primary w-full py-3">
@@ -66,8 +95,8 @@
         </div>
 
         <div v-else-if="currentView === 'admin'" class="flex h-screen overflow-hidden">
-            <aside class="w-64 bg-white border-r border-gray-200 flex flex-col z-10 hidden md:flex">
-                <div class="p-6 border-b border-gray-100 font-bold text-lg text-blue-600 flex items-center gap-2">
+            <aside class="w-64 bg-white dark:bg-dark-surface border-r border-gray-200 dark:border-dark-border flex flex-col z-10 hidden md:flex transition-colors">
+                <div class="p-6 border-b border-gray-100 dark:border-dark-border font-bold text-lg text-blue-600 dark:text-blue-400 flex items-center gap-2">
                     <i class="ph ph-sliders"></i> Admin Panel
                 </div>
                 <nav class="flex-1 p-4 space-y-1">
@@ -76,10 +105,10 @@
                     <button @click="adminTab = 'formatos'" :class="['nav-item', adminTab === 'formatos' ? 'active' : '']"><i class="ph ph-ruler"></i> Formatos</button>
                     <button @click="adminTab = 'cadastros'" :class="['nav-item', adminTab === 'cadastros' ? 'active' : '']"><i class="ph ph-package"></i> Produtos/Linhas</button>
                 </nav>
-                <div class="p-4"><button @click="logout" class="nav-item text-red-600 hover:bg-red-50"><i class="ph ph-sign-out"></i> Sair</button></div>
+                <div class="p-4"><button @click="logout" class="nav-item text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"><i class="ph ph-sign-out"></i> Sair</button></div>
             </aside>
 
-            <main class="flex-1 overflow-y-auto bg-gray-50 p-6">
+            <main class="flex-1 overflow-y-auto bg-gray-50 dark:bg-dark-bg p-6 transition-colors">
                 <div class="md:hidden flex justify-between mb-4">
                     <h1 class="font-bold">Painel Admin</h1>
                     <button @click="logout" class="text-red-500"><i class="ph ph-sign-out text-xl"></i></button>
@@ -88,28 +117,28 @@
                 <div v-if="adminTab === 'dashboard'">
                     <h2 class="text-2xl font-bold mb-6">Dashboard</h2>
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                        <div class="bg-white p-5 rounded-xl border shadow-sm">
+                        <div class="bg-white dark:bg-dark-surface p-5 rounded-xl border dark:border-dark-border shadow-sm">
                             <div class="text-gray-400 text-xs font-bold uppercase mb-1">Total Inspeções</div>
-                            <div class="text-3xl font-bold text-gray-800">{{ stats.total }}</div>
+                            <div class="text-3xl font-bold">{{ stats.total }}</div>
                         </div>
-                        <div class="bg-white p-5 rounded-xl border shadow-sm">
+                        <div class="bg-white dark:bg-dark-surface p-5 rounded-xl border dark:border-dark-border shadow-sm">
                             <div class="text-gray-400 text-xs font-bold uppercase mb-1">Pós Folga</div>
-                            <div class="text-3xl font-bold text-blue-600">{{ stats.posFolga }}</div>
+                            <div class="text-3xl font-bold text-blue-600 dark:text-blue-400">{{ stats.posFolga }}</div>
                         </div>
-                        <div class="bg-white p-5 rounded-xl border shadow-sm">
+                        <div class="bg-white dark:bg-dark-surface p-5 rounded-xl border dark:border-dark-border shadow-sm">
                             <div class="text-gray-400 text-xs font-bold uppercase mb-1">Reprovados</div>
-                            <div class="text-3xl font-bold text-red-600">{{ stats.reprovados }}</div>
+                            <div class="text-3xl font-bold text-red-600 dark:text-red-400">{{ stats.reprovados }}</div>
                         </div>
-                        <div class="bg-white p-5 rounded-xl border shadow-sm">
+                        <div class="bg-white dark:bg-dark-surface p-5 rounded-xl border dark:border-dark-border shadow-sm">
                             <div class="text-gray-400 text-xs font-bold uppercase mb-1">Hoje</div>
-                            <div class="text-3xl font-bold text-emerald-600">{{ stats.hoje }}</div>
+                            <div class="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{{ stats.hoje }}</div>
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div class="p-4 border-b bg-gray-50 font-bold text-gray-700">Histórico de Inspeções</div>
+                    <div class="bg-white dark:bg-dark-surface rounded-xl shadow-sm border border-gray-200 dark:border-dark-border overflow-hidden">
+                        <div class="p-4 border-b bg-gray-50 dark:bg-dark-surface dark:border-dark-border font-bold text-gray-700 dark:text-gray-200">Histórico de Inspeções</div>
                         <table class="w-full text-left text-sm">
-                            <thead class="bg-gray-50 border-b border-gray-200 text-gray-500">
+                            <thead class="bg-gray-50 dark:bg-dark-bg border-b border-gray-200 dark:border-dark-border text-gray-500">
                                 <tr>
                                     <th class="p-4">Data</th>
                                     <th class="p-4">Status</th>
@@ -118,20 +147,20 @@
                                     <th class="p-4 text-right">Ação</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr v-for="rel in relatoriosFiltrados" :key="rel.id" class="border-b border-gray-100 hover:bg-blue-50 transition">
+                            <tbody class="divide-y divide-gray-100 dark:divide-dark-border">
+                                <tr v-for="rel in relatoriosFiltrados" :key="rel.id" class="hover:bg-blue-50 dark:hover:bg-blue-900/10 transition">
                                     <td class="p-4">
                                         {{ formatarData(rel.dataHora) }}
-                                        <div v-if="rel.posFolga === 'Sim'" class="mt-1"><span class="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase">Pós Folga</span></div>
+                                        <div v-if="rel.posFolga === 'Sim'" class="mt-1"><span class="bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase">Pós Folga</span></div>
                                     </td>
                                     <td class="p-4">
-                                        <span v-if="rel.resultado === 'Aprovado'" class="text-green-600 font-bold bg-green-100 px-2 py-1 rounded text-xs">APROVADO</span>
-                                        <span v-else class="text-red-600 font-bold bg-red-100 px-2 py-1 rounded text-xs">REPROVADO</span>
+                                        <span v-if="rel.resultado === 'Aprovado'" class="text-green-600 dark:text-green-400 font-bold bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded text-xs">APROVADO</span>
+                                        <span v-else class="text-red-600 dark:text-red-400 font-bold bg-red-100 dark:bg-red-900/30 px-2 py-1 rounded text-xs">REPROVADO</span>
                                     </td>
                                     <td class="p-4 font-bold">{{ rel.inspetor }}</td>
-                                    <td class="p-4 text-xs text-gray-500">{{ rel.produto }} <br> Lote: {{ rel.lote }}</td>
+                                    <td class="p-4 text-xs text-gray-500 dark:text-gray-400">{{ rel.produto }} <br> Lote: {{ rel.lote }}</td>
                                     <td class="p-4 text-right">
-                                        <button @click="abrirDetalhesRelatorio(rel)" class="text-blue-600 hover:text-blue-800 font-medium">Ver</button>
+                                        <button @click="abrirDetalhesRelatorio(rel)" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 font-medium">Ver</button>
                                     </td>
                                 </tr>
                             </tbody>
@@ -141,8 +170,8 @@
 
                 <div v-if="adminTab === 'usuarios'">
                     <h2 class="text-2xl font-bold mb-6">Usuários</h2>
-                    <div class="bg-white p-6 rounded-xl border shadow-sm mb-8">
-                        <h3 class="font-bold mb-4 text-blue-600">Novo Cadastro</h3>
+                    <div class="bg-white dark:bg-dark-surface p-6 rounded-xl border dark:border-dark-border shadow-sm mb-8">
+                        <h3 class="font-bold mb-4 text-blue-600 dark:text-blue-400">Novo Cadastro</h3>
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                             <div>
                                 <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Nome Completo</label>
@@ -153,23 +182,23 @@
                                 <input v-model="novoUsuarioForm.matricula" class="input-clean w-full" placeholder="Ex: 12345">
                             </div>
                             <div>
-                                <label class="flex items-center gap-2 cursor-pointer bg-gray-50 p-2.5 rounded-lg border border-gray-200 hover:bg-gray-100">
-                                    <input type="checkbox" v-model="novoUsuarioForm.admin" class="w-4 h-4 text-blue-600">
-                                    <span class="text-sm font-bold text-gray-600">Admin?</span>
+                                <label class="flex items-center gap-2 cursor-pointer bg-gray-50 dark:bg-dark-bg p-2.5 rounded-lg border border-gray-200 dark:border-dark-border hover:bg-gray-100 dark:hover:bg-gray-800">
+                                    <input type="checkbox" v-model="novoUsuarioForm.admin" class="w-4 h-4 text-blue-600 rounded bg-gray-100 border-gray-300 dark:bg-gray-700 dark:border-gray-600">
+                                    <span class="text-sm font-bold text-gray-600 dark:text-gray-300">Admin?</span>
                                 </label>
                             </div>
                             <button @click="cadastrarUsuario" class="btn-primary w-full h-[42px]">Cadastrar</button>
                         </div>
                     </div>
                     
-                    <div class="bg-white rounded-xl shadow-sm border p-4">
+                    <div class="bg-white dark:bg-dark-surface rounded-xl shadow-sm border dark:border-dark-border p-4">
                          <table class="w-full text-left text-sm">
-                            <thead><tr class="text-gray-500 border-b"><th class="pb-2">Nome</th><th class="pb-2">Login</th><th class="pb-2">Acesso</th><th class="pb-2 text-right">Ação</th></tr></thead>
+                            <thead><tr class="text-gray-500 border-b dark:border-dark-border"><th class="pb-2">Nome</th><th class="pb-2">Login</th><th class="pb-2">Acesso</th><th class="pb-2 text-right">Ação</th></tr></thead>
                             <tbody>
-                                <tr v-for="u in cadastros.usuarios" :key="u.id" class="border-b last:border-0 hover:bg-gray-50">
+                                <tr v-for="u in cadastros.usuarios" :key="u.id" class="border-b dark:border-dark-border last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800">
                                     <td class="py-3 font-bold">{{ u.nome }}</td>
-                                    <td class="py-3 font-mono text-blue-600">{{ u.login }}</td>
-                                    <td class="py-3"><span :class="u.admin ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'" class="px-2 py-1 rounded text-xs font-bold">{{ u.admin ? 'ADMIN' : 'INSPETOR' }}</span></td>
+                                    <td class="py-3 font-mono text-blue-600 dark:text-blue-400">{{ u.login }}</td>
+                                    <td class="py-3"><span :class="u.admin ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'" class="px-2 py-1 rounded text-xs font-bold">{{ u.admin ? 'ADMIN' : 'INSPETOR' }}</span></td>
                                     <td class="py-3 text-right"><button @click="removerItem('usuarios', u.id)" class="text-red-400 hover:text-red-600"><i class="ph ph-trash"></i></button></td>
                                 </tr>
                             </tbody>
@@ -184,47 +213,43 @@
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <div v-for="fmt in cadastros.formatos" :key="fmt.id" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 relative group hover:shadow-md transition-all">
+                        <div v-for="fmt in cadastros.formatos" :key="fmt.id" class="bg-white dark:bg-dark-surface rounded-2xl shadow-sm border border-gray-200 dark:border-dark-border p-6 relative group hover:shadow-md transition-all">
                             <button @click="removerItem('formatos', fmt.id)" class="absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors"><i class="ph ph-trash text-xl"></i></button>
                             
                             <div class="mb-6">
                                 <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Nome do Formato</label>
-                                <input v-model="fmt.nome" @change="atualizarFormato(fmt)" class="block w-full text-xl font-bold text-blue-600 border-b border-dashed border-gray-300 focus:border-blue-500 outline-none bg-transparent pb-1" placeholder="Ex: 60x60">
+                                <input v-model="fmt.nome" @change="atualizarFormato(fmt)" class="block w-full text-xl font-bold text-blue-600 dark:text-blue-400 border-b border-dashed border-gray-300 dark:border-gray-600 focus:border-blue-500 outline-none bg-transparent pb-1" placeholder="Ex: 60x60">
                             </div>
 
                             <div class="space-y-4">
-                                <div class="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                                <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-100 dark:border-blue-800">
                                     <div class="flex items-center gap-2 mb-2">
                                         <i class="ph-fill ph-arrows-vertical text-blue-500"></i>
-                                        <span class="text-xs font-bold text-blue-700 uppercase">Lateral (Vertical)</span>
+                                        <span class="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase">Lateral (Vertical)</span>
                                     </div>
                                     <div class="flex items-center justify-between gap-2">
                                         <div class="flex flex-col w-full">
-                                            <span class="text-[10px] text-blue-400 mb-1">Mínimo</span>
-                                            <input type="number" step="0.01" v-model.number="fmt.latMin" @change="atualizarFormato(fmt)" class="bg-white border border-blue-200 rounded-lg p-2 text-center text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-200">
+                                            <input type="number" step="0.01" v-model.number="fmt.latMin" @change="atualizarFormato(fmt)" class="input-clean text-center text-sm font-bold">
                                         </div>
                                         <span class="text-blue-300 font-bold">/</span>
                                         <div class="flex flex-col w-full">
-                                            <span class="text-[10px] text-blue-400 mb-1">Máximo</span>
-                                            <input type="number" step="0.01" v-model.number="fmt.latMax" @change="atualizarFormato(fmt)" class="bg-white border border-blue-200 rounded-lg p-2 text-center text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-200">
+                                            <input type="number" step="0.01" v-model.number="fmt.latMax" @change="atualizarFormato(fmt)" class="input-clean text-center text-sm font-bold">
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                                <div class="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl border border-emerald-100 dark:border-emerald-800">
                                     <div class="flex items-center gap-2 mb-2">
                                         <i class="ph-fill ph-arrows-in-cardinal text-emerald-500"></i>
-                                        <span class="text-xs font-bold text-emerald-700 uppercase">Central (Mesa)</span>
+                                        <span class="text-xs font-bold text-emerald-700 dark:text-emerald-300 uppercase">Central (Mesa)</span>
                                     </div>
                                     <div class="flex items-center justify-between gap-2">
                                         <div class="flex flex-col w-full">
-                                            <span class="text-[10px] text-emerald-400 mb-1">Mínimo</span>
-                                            <input type="number" step="0.01" v-model.number="fmt.centMin" @change="atualizarFormato(fmt)" class="bg-white border border-emerald-200 rounded-lg p-2 text-center text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-emerald-200">
+                                            <input type="number" step="0.01" v-model.number="fmt.centMin" @change="atualizarFormato(fmt)" class="input-clean text-center text-sm font-bold">
                                         </div>
                                         <span class="text-emerald-300 font-bold">/</span>
                                         <div class="flex flex-col w-full">
-                                            <span class="text-[10px] text-emerald-400 mb-1">Máximo</span>
-                                            <input type="number" step="0.01" v-model.number="fmt.centMax" @change="atualizarFormato(fmt)" class="bg-white border border-emerald-200 rounded-lg p-2 text-center text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-emerald-200">
+                                            <input type="number" step="0.01" v-model.number="fmt.centMax" @change="atualizarFormato(fmt)" class="input-clean text-center text-sm font-bold">
                                         </div>
                                     </div>
                                 </div>
@@ -236,30 +261,30 @@
                 <div v-if="adminTab === 'cadastros'">
                     <h2 class="text-2xl font-bold mb-6">Cadastros Básicos</h2>
                     <div class="grid md:grid-cols-2 gap-8">
-                        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 flex flex-col h-[500px]">
-                            <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-2xl">
+                        <div class="bg-white dark:bg-dark-surface rounded-2xl shadow-sm border border-gray-200 dark:border-dark-border flex flex-col h-[500px]">
+                            <div class="p-5 border-b border-gray-100 dark:border-dark-border flex justify-between items-center bg-gray-50 dark:bg-dark-surface rounded-t-2xl">
                                 <h3 class="font-bold flex items-center gap-2"><i class="ph-fill ph-package text-blue-500"></i> Produtos</h3>
                                 <button @click="novoItemSimples('produtos')" class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 font-bold">+ Adicionar</button>
                             </div>
-                            <div class="p-4 border-b border-gray-100">
-                                <input v-model="filtroAdminProdutos" placeholder="Buscar produto..." class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm outline-none focus:border-blue-500 pl-9 bg-[url('https://unpkg.com/@phosphor-icons/web/src/regular/magnifying-glass.svg')] bg-no-repeat bg-[10px_center]">
+                            <div class="p-4 border-b border-gray-100 dark:border-dark-border">
+                                <input v-model="filtroAdminProdutos" placeholder="Buscar produto..." class="input-clean pl-9 bg-[url('https://unpkg.com/@phosphor-icons/web/src/regular/magnifying-glass.svg')] bg-no-repeat bg-[10px_center]">
                             </div>
                             <div class="overflow-y-auto flex-1 p-2">
-                                <div v-for="p in produtosAdminFiltrados" :key="p.id" class="group flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors border-b border-gray-50 last:border-0">
-                                    <input v-model="p.nome" @change="atualizarItemSimples('produtos', p)" class="bg-transparent outline-none w-full text-sm font-medium text-gray-700 focus:text-blue-600">
+                                <div v-for="p in produtosAdminFiltrados" :key="p.id" class="group flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors border-b border-gray-50 dark:border-dark-border last:border-0">
+                                    <input v-model="p.nome" @change="atualizarItemSimples('produtos', p)" class="bg-transparent outline-none w-full text-sm font-medium focus:text-blue-600">
                                     <button @click="removerItem('produtos', p.id)" class="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-opacity p-2"><i class="ph-bold ph-trash"></i></button>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 flex flex-col h-[500px]">
-                            <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-2xl">
+                        <div class="bg-white dark:bg-dark-surface rounded-2xl shadow-sm border border-gray-200 dark:border-dark-border flex flex-col h-[500px]">
+                            <div class="p-5 border-b border-gray-100 dark:border-dark-border flex justify-between items-center bg-gray-50 dark:bg-dark-surface rounded-t-2xl">
                                 <h3 class="font-bold flex items-center gap-2"><i class="ph-fill ph-factory text-emerald-500"></i> Linhas</h3>
                                 <button @click="novoItemSimples('linhas')" class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-700 font-bold">+ Adicionar</button>
                             </div>
                             <div class="overflow-y-auto flex-1 p-2">
-                                <div v-for="l in cadastros.linhas" :key="l.id" class="group flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors border-b border-gray-50 last:border-0">
-                                    <input v-model="l.nome" @change="atualizarItemSimples('linhas', l)" class="bg-transparent outline-none w-full text-sm font-medium text-gray-700 focus:text-emerald-600">
+                                <div v-for="l in cadastros.linhas" :key="l.id" class="group flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors border-b border-gray-50 dark:border-dark-border last:border-0">
+                                    <input v-model="l.nome" @change="atualizarItemSimples('linhas', l)" class="bg-transparent outline-none w-full text-sm font-medium focus:text-emerald-600">
                                     <button @click="removerItem('linhas', l.id)" class="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-opacity p-2"><i class="ph-bold ph-trash"></i></button>
                                 </div>
                             </div>
@@ -269,25 +294,25 @@
             </main>
 
             <div v-if="relatorioSelecionado" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-                <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
-                    <div class="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-2xl">
+                <div class="bg-white dark:bg-dark-surface rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
+                    <div class="p-4 border-b dark:border-dark-border flex justify-between items-center bg-gray-50 dark:bg-dark-surface rounded-t-2xl">
                         <h3 class="font-bold">Detalhes da Inspeção</h3>
                         <button @click="relatorioSelecionado = null" class="text-gray-400 hover:text-gray-600"><i class="ph ph-x text-xl"></i></button>
                     </div>
                     <div class="p-6 overflow-y-auto">
-                        <div class="grid grid-cols-2 gap-4 text-sm mb-6 bg-blue-50 p-4 rounded-lg">
+                        <div class="grid grid-cols-2 gap-4 text-sm mb-6 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
                             <div><b>Inspetor:</b> {{ relatorioSelecionado.inspetor }}</div>
                             <div><b>Pós Folga:</b> {{ relatorioSelecionado.posFolga }}</div>
                             <div><b>Produto:</b> {{ relatorioSelecionado.produto }}</div>
-                            <div><b>Resultado:</b> <span :class="relatorioSelecionado.resultado === 'Aprovado' ? 'text-green-600' : 'text-red-600 font-bold'">{{ relatorioSelecionado.resultado }}</span></div>
+                            <div><b>Resultado:</b> <span :class="relatorioSelecionado.resultado === 'Aprovado' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400 font-bold'">{{ relatorioSelecionado.resultado }}</span></div>
                         </div>
                         <h4 class="font-bold mb-2">Medições</h4>
                         <div class="space-y-4">
-                            <div v-for="(peca, idx) in relatorioSelecionado.pecas" class="border p-3 rounded-lg">
+                            <div v-for="(peca, idx) in relatorioSelecionado.pecas" class="border dark:border-dark-border p-3 rounded-lg">
                                 <div class="font-bold text-xs text-gray-500 mb-2">PEÇA {{ idx + 1 }}</div>
                                 <div class="grid grid-cols-2 gap-4">
-                                    <div class="text-sm">LAT: <span v-for="(v, k) in peca.laterais" class="mr-2 inline-block">{{k}}: <b :class="getStatusRelatorio(relatorioSelecionado, v, 'lateral') ? 'text-gray-800' : 'text-red-600 font-extrabold bg-red-100 px-1 rounded'">{{v}}</b></span></div>
-                                    <div class="text-sm">CEN: <span v-for="(v, k) in peca.centrais" class="mr-2 inline-block">C{{k}}: <b :class="getStatusRelatorio(relatorioSelecionado, v, 'central') ? 'text-gray-800' : 'text-red-600 font-extrabold bg-red-100 px-1 rounded'">{{v}}</b></span></div>
+                                    <div class="text-sm">LAT: <span v-for="(v, k) in peca.laterais" class="mr-2 inline-block">{{k}}: <b :class="getStatusRelatorio(relatorioSelecionado, v, 'lateral') ? 'text-gray-800 dark:text-gray-200' : 'text-red-600 font-extrabold bg-red-100 px-1 rounded'">{{v}}</b></span></div>
+                                    <div class="text-sm">CEN: <span v-for="(v, k) in peca.centrais" class="mr-2 inline-block">C{{k}}: <b :class="getStatusRelatorio(relatorioSelecionado, v, 'central') ? 'text-gray-800 dark:text-gray-200' : 'text-red-600 font-extrabold bg-red-100 px-1 rounded'">{{v}}</b></span></div>
                                 </div>
                             </div>
                         </div>
@@ -297,21 +322,21 @@
         </div>
 
         <div v-else-if="currentView === 'inspector'" class="flex flex-col h-screen">
-            <header class="bg-white border-b px-4 py-3 shadow-sm flex justify-between items-center z-20">
-                <div class="flex items-center gap-2 font-bold text-gray-800">
+            <header class="bg-white dark:bg-dark-surface border-b border-gray-200 dark:border-dark-border px-4 py-3 shadow-sm flex justify-between items-center z-20">
+                <div class="flex items-center gap-2 font-bold text-gray-800 dark:text-white">
                     <i class="ph-fill ph-check-square text-blue-600 text-xl"></i> 
                     <span class="hidden sm:inline">Empeno Pro</span>
                 </div>
                 <div class="flex items-center gap-3">
                     <div class="text-xs text-right hidden sm:block">
-                        <div class="font-bold">{{ loginData.user }}</div>
+                        <div class="font-bold text-gray-800 dark:text-white">{{ loginData.user }}</div>
                         <div class="text-gray-400">Inspetor</div>
                     </div>
-                    <button @click="logout" class="text-red-500 p-2 hover:bg-red-50 rounded-full"><i class="ph ph-sign-out text-xl"></i></button>
+                    <button @click="logout" class="text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full"><i class="ph ph-sign-out text-xl"></i></button>
                 </div>
             </header>
 
-            <div class="bg-white border-b p-4 shadow-sm z-10 space-y-3">
+            <div class="bg-white dark:bg-dark-surface border-b dark:border-dark-border p-4 shadow-sm z-10 space-y-3">
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-3 items-center">
                     <select v-model="form.linha" @change="salvarRascunho" class="input-clean"><option value="">Linha...</option><option v-for="l in cadastros.linhas" :value="l.nome">{{ l.nome }}</option></select>
                     <select v-model="form.formatoId" @change="salvarRascunho" class="input-clean"><option value="">Formato...</option><option v-for="f in cadastros.formatos" :value="f.id">{{ f.nome }}</option></select>
@@ -322,13 +347,13 @@
                                @blur="setTimeout(() => mostrandoListaProdutos = false, 200)"
                                placeholder="Buscar Produto..." 
                                class="input-clean w-full pl-8"
-                               :class="form.produto ? 'border-green-400 bg-green-50 text-green-800 font-bold' : ''">
+                               :class="form.produto ? 'border-green-400 bg-green-50 dark:bg-green-900/20 dark:border-green-800 text-green-800 dark:text-green-400 font-bold' : ''">
                         <i class="ph ph-magnifying-glass absolute left-2.5 top-3 text-gray-400"></i>
                         
-                        <div v-if="mostrandoListaProdutos" class="absolute top-full left-0 w-full bg-white border border-gray-200 shadow-xl rounded-lg mt-1 max-h-60 overflow-y-auto z-50">
+                        <div v-if="mostrandoListaProdutos" class="absolute top-full left-0 w-full bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border shadow-xl rounded-lg mt-1 max-h-60 overflow-y-auto z-50">
                             <div v-for="p in produtosFiltrados" 
                                  @click="selecionarProduto(p.nome)"
-                                 class="p-2.5 text-sm hover:bg-blue-50 cursor-pointer border-b border-gray-50 text-gray-700">
+                                 class="p-2.5 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer border-b border-gray-50 dark:border-dark-border text-gray-700 dark:text-gray-300">
                                 {{ p.nome }}
                             </div>
                             <div v-if="produtosFiltrados.length === 0" class="p-3 text-xs text-gray-400 text-center">Nenhum produto encontrado.</div>
@@ -337,7 +362,7 @@
 
                     <input v-model="form.lote" @input="form.lote = form.lote.toUpperCase()" class="input-clean uppercase font-bold" placeholder="LOTE">
                     
-                    <select v-model="form.posFolga" @change="salvarRascunho" class="input-clean border-blue-300 bg-blue-50 font-medium text-blue-800">
+                    <select v-model="form.posFolga" @change="salvarRascunho" class="input-clean border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 font-medium text-blue-800 dark:text-blue-300">
                         <option value="">Pós Folga? *</option>
                         <option value="Sim">Sim</option>
                         <option value="Não">Não</option>
@@ -345,13 +370,13 @@
                 </div>
             </div>
 
-            <main class="flex-1 overflow-y-auto p-4 bg-gray-100 pb-32">
+            <main class="flex-1 overflow-y-auto p-4 bg-gray-100 dark:bg-dark-bg pb-32">
                 <div class="max-w-3xl mx-auto space-y-4">
                     <div v-if="!form.formatoId" class="text-center p-8 text-gray-400">Selecione um formato para começar.</div>
                     
-                    <div v-for="(peca, idx) in form.pecas" :key="idx" class="bg-white rounded-xl shadow-sm border overflow-hidden animate-fade-in">
-                        <div class="bg-gray-50 px-4 py-2 border-b flex justify-between items-center">
-                            <span class="font-bold text-gray-600 text-sm">PEÇA {{ idx + 1 }}</span>
+                    <div v-for="(peca, idx) in form.pecas" :key="idx" class="bg-white dark:bg-dark-surface rounded-xl shadow-sm border border-gray-200 dark:border-dark-border overflow-hidden animate-fade-in">
+                        <div class="bg-gray-50 dark:bg-dark-surface dark:border-dark-border px-4 py-2 border-b flex justify-between items-center">
+                            <span class="font-bold text-gray-600 dark:text-gray-300 text-sm">PEÇA {{ idx + 1 }}</span>
                             <button @click="removerPeca(idx)" class="text-red-400 hover:text-red-600"><i class="ph ph-trash"></i></button>
                         </div>
                         <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -389,29 +414,29 @@
                             </div>
                         </div>
                     </div>
-                    <button @click="adicionarPeca" class="w-full py-4 border-2 border-dashed border-gray-300 rounded-xl text-gray-400 hover:border-blue-500 hover:text-blue-500 transition font-medium bg-white">
+                    <button @click="adicionarPeca" class="w-full py-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-gray-400 hover:border-blue-500 hover:text-blue-500 transition font-medium bg-white dark:bg-dark-surface">
                         <i class="ph ph-plus-circle text-xl align-middle"></i> Nova Peça
                     </button>
                 </div>
             </main>
             
-            <div class="fixed bottom-6 left-0 right-0 flex justify-center z-50 pointer-events-none">
-                <button @click="gerarRelatorioFinal" class="pointer-events-auto bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 py-4 shadow-2xl flex items-center gap-3 transition-transform hover:scale-105 active:scale-95">
+            <div class="fixed bottom-2 left-0 right-0 flex justify-center z-50 pointer-events-none">
+                <button @click="gerarRelatorioFinal" class="pointer-events-auto bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 py-3 shadow-2xl flex items-center gap-3 transition-transform hover:scale-105 active:scale-95 border-2 border-white/20 backdrop-blur-sm">
                     <i class="ph-fill ph-check-circle text-2xl"></i>
-                    <span class="font-bold text-lg">Concluir Inspeção</span>
+                    <span class="font-bold text-lg">Concluir</span>
                 </button>
             </div>
         </div>
 
         <div v-if="reportText" class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl w-full max-w-md p-6">
-                <h3 class="font-bold text-lg mb-4 text-green-600">Sucesso!</h3>
-                <textarea class="w-full h-40 bg-gray-100 p-3 text-xs font-mono rounded-lg mb-4" readonly>{{ reportText }}</textarea>
+            <div class="bg-white dark:bg-dark-surface rounded-2xl w-full max-w-md p-6 border dark:border-dark-border">
+                <h3 class="font-bold text-lg mb-4 text-green-600 dark:text-green-400">Sucesso!</h3>
+                <textarea class="w-full h-40 bg-gray-100 dark:bg-dark-bg dark:text-gray-300 p-3 text-xs font-mono rounded-lg mb-4 border dark:border-dark-border" readonly>{{ reportText }}</textarea>
                 <div class="grid grid-cols-2 gap-3">
                     <button @click="copiarTexto" class="btn-secondary">Copiar</button>
                     <button @click="enviarZap" class="btn-whatsapp">WhatsApp</button>
                 </div>
-                <button @click="novaInspecaoLimpa" class="w-full mt-3 text-sm text-gray-500 underline">Fechar e Iniciar Nova</button>
+                <button @click="novaInspecaoLimpa" class="w-full mt-3 text-sm text-gray-500 dark:text-gray-400 underline">Fechar e Iniciar Nova</button>
             </div>
         </div>
 
