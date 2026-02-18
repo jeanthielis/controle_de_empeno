@@ -125,7 +125,7 @@ createApp({
         };
 
         // ==========================================
-        // 4. MÁSCARA INTELIGENTE (CORRIGIDA)
+        // 4. MÁSCARA E DIGITAÇÃO (3 DÍGITOS REAIS)
         // ==========================================
         const mascararInput = (event, pecaObj, tipo, chave) => {
             let input = event.target;
@@ -135,10 +135,7 @@ createApp({
             // Pega apenas números
             let numeros = valorOriginal.replace(/\D/g, '');
             
-            // --- CORREÇÃO AQUI ---
-            // Removemos os zeros à esquerda para contar apenas o que o usuário digitou.
-            // Ex: "015" vira "15" (length 2) -> Não pula
-            // Ex: "150" vira "150" (length 3) -> Pula
+            // Remove zeros à esquerda para contar dígitos reais (1,50 -> 150 -> length 3)
             let digitosReais = numeros.replace(/^0+/, '');
 
             let valorVisual = '';
@@ -150,7 +147,6 @@ createApp({
             }
             if (isNegative) { valorVisual = '-' + valorVisual; valorFloat = valorFloat * -1; }
             
-            // Se estiver vazio ou zerado
             if (numeros.length === 0 && !isNegative) { valorVisual = ''; valorFloat = null; } 
             else if (numeros.length === 0 && isNegative) { valorVisual = '-'; }
 
@@ -163,7 +159,7 @@ createApp({
             }
             input.value = valorVisual;
 
-            // Pula se tiver 3 ou mais dígitos reais (ignorando zeros à esquerda e virgulas)
+            // Pula se tiver 3 ou mais dígitos reais
             if (digitosReais.length >= 3) {
                 focarProximoInput(input);
             }
@@ -216,13 +212,46 @@ createApp({
             if(currentInspectionId.value) await updateDoc(doc(db, "inspecoes", currentInspectionId.value), { status: 'finalizado' });
 
             const now = new Date();
-            let txt = `*RELATÓRIO DE EMPENO*\n📅 ${now.toLocaleDateString()} ${now.toLocaleTimeString().slice(0,5)}\n👤 ${loginData.value.user}\n🚨 Pós Folga: ${form.value.posFolga}\n🏭 ${form.value.linha} | 📦 ${form.value.produto}\n📏 ${configAtiva.value.nome} | 🏷️ ${form.value.lote}\n------------------\n`;
+            
+            // --- NOVO FORMATO DE RELATÓRIO WHATSAPP ---
+            let txt = `*RELATÓRIO DE EMPENO*\n`;
+            txt += `*Data:* ${now.toLocaleDateString()} ${now.toLocaleTimeString().slice(0,5)}\n`;
+            txt += `*Responsável:* ${loginData.value.user}\n`;
+            
+            // Pós Folga condicional
+            if (form.value.posFolga === 'Sim') {
+                txt += `*Pós Folga:* Sim\n`;
+            }
+
+            txt += `*Linha:* ${form.value.linha}\n`;
+            txt += `*Produto:* ${form.value.produto}\n`;
+            txt += `*Formato:* ${configAtiva.value.nome}\n`;
+            txt += `*Lote:* ${form.value.lote}\n`;
+            txt += `--------------------------------\n`;
+
             form.value.pecas.forEach((p, i) => {
                 txt += `\n*P${i+1}* `;
-                const l = Object.entries(p.laterais).filter(([_,v])=>v!=null).map(([k,v])=>`${getStatusClass(v,'lateral')=='status-ok'?'✅':'❌'}${k}:${v}`).join(' ');
-                const c = Object.entries(p.centrais).filter(([_,v])=>v!=null).map(([k,v])=>`${getStatusClass(v,'central')=='status-ok'?'✅':'❌'}C${k}:${v}`).join(' ');
-                if(l) txt+=`\nL: ${l}`; if(c) txt+=`\nC: ${c}`;
+                
+                const l = Object.entries(p.laterais)
+                    .filter(([_,v]) => v != null && v !== '')
+                    .map(([k,v]) => {
+                        // Bolinha Verde ou Vermelha
+                        const icon = getStatusClass(v,'lateral') === 'status-ok' ? '🟢' : '🔴';
+                        return `${icon} ${k}:${v}`;
+                    }).join('  ');
+                
+                const c = Object.entries(p.centrais)
+                    .filter(([_,v]) => v != null && v !== '')
+                    .map(([k,v]) => {
+                        // Bolinha Verde ou Vermelha
+                        const icon = getStatusClass(v,'central') === 'status-ok' ? '🟢' : '🔴';
+                        return `${icon} C${k}:${v}`;
+                    }).join('  ');
+                
+                if(l) txt += `\nL: ${l}`; 
+                if(c) txt += `\nC: ${c}`;
             });
+
             reportText.value = txt;
             notify('Sucesso', 'Relatório gerado.', 'sucesso');
         };
