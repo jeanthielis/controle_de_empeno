@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>QualityControl | Sistema de Empeno</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -155,6 +155,7 @@
                             <button @click="cadastrarUsuario" class="btn-primary w-full h-[42px]">Cadastrar</button>
                         </div>
                     </div>
+                    
                     <div class="bg-white rounded-xl shadow-sm border p-4">
                          <table class="w-full text-left text-sm">
                             <thead><tr class="text-gray-500 border-b"><th class="pb-2">Nome</th><th class="pb-2">Login</th><th class="pb-2">Acesso</th><th class="pb-2 text-right">Ação</th></tr></thead>
@@ -229,7 +230,6 @@
                 <div v-if="adminTab === 'cadastros'">
                     <h2 class="text-2xl font-bold mb-6">Cadastros Básicos</h2>
                     <div class="grid md:grid-cols-2 gap-8">
-                        
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-200 flex flex-col h-[500px]">
                             <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-2xl">
                                 <h3 class="font-bold flex items-center gap-2"><i class="ph-fill ph-package text-blue-500"></i> Produtos</h3>
@@ -258,12 +258,11 @@
                                 </div>
                             </div>
                         </div>
-
                     </div>
                 </div>
-
             </main>
-             <div v-if="relatorioSelecionado" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+
+            <div v-if="relatorioSelecionado" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
                 <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
                     <div class="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-2xl">
                         <h3 class="font-bold">Detalhes da Inspeção</h3>
@@ -339,8 +338,8 @@
                 </div>
             </div>
 
-            <main class="flex-1 overflow-y-auto p-4 bg-gray-100">
-                <div class="max-w-3xl mx-auto space-y-4 pb-20">
+            <main class="flex-1 overflow-y-auto p-4 bg-gray-100 pb-32">
+                <div class="max-w-3xl mx-auto space-y-4">
                     <div v-if="!form.formatoId" class="text-center p-8 text-gray-400">Selecione um formato para começar.</div>
                     
                     <div v-for="(peca, idx) in form.pecas" :key="idx" class="bg-white rounded-xl shadow-sm border overflow-hidden animate-fade-in">
@@ -389,7 +388,7 @@
                 </div>
             </main>
             
-            <footer class="bg-white p-4 border-t flex justify-center z-20">
+            <footer class="fixed bottom-0 left-0 right-0 bg-white p-4 border-t flex justify-center z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
                 <button @click="gerarRelatorioFinal" class="btn-primary w-full max-w-sm py-3 text-lg shadow-lg">Concluir Inspeção</button>
             </footer>
         </div>
