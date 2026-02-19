@@ -6,7 +6,6 @@ import {
 
 createApp({
     setup() {
-        // --- Notificações ---
         const notificacoes = ref([]);
         const notify = (titulo, mensagem, tipo = 'info') => {
             const id = Date.now();
@@ -14,7 +13,6 @@ createApp({
             setTimeout(() => notificacoes.value = notificacoes.value.filter(n => n.id !== id), 4000);
         };
 
-        // --- Dark Mode ---
         const isDarkMode = ref(false);
         const toggleDarkMode = () => {
             isDarkMode.value = !isDarkMode.value;
@@ -27,14 +25,12 @@ createApp({
             }
         };
 
-        // --- Estado Global ---
         const currentView = ref('login'); 
         const loginData = ref({ user: '', pass: '', remember: false });
         const loading = ref(false);
         const salvandoAuto = ref(false);
         const relatorioSelecionado = ref(null);
         
-        // --- Admin Data ---
         const adminTab = ref('dashboard'); 
         const mobileMenuOpen = ref(false); 
         const filtros = ref({ data: '', produto: '', lote: '', posFolga: '' });
@@ -42,22 +38,20 @@ createApp({
         const novoUsuarioForm = ref({ nome: '', matricula: '', admin: false });
         const cadastros = ref({ formatos: [], produtos: [], linhas: [], inspecoes: [], usuarios: [] });
 
-        // --- Inspetor Data ---
         const currentInspectionId = ref(null);
         const produtoSearch = ref('');
         const mostrandoListaProdutos = ref(false);
         const form = ref({ linha: '', formatoId: '', produto: '', lote: '', posFolga: '', pecas: [] });
         const reportText = ref('');
 
-        // --- Navegação ---
-        const navigateAdmin = (tab) => {
-            adminTab.value = tab;
-            mobileMenuOpen.value = false;
+        const navigateAdmin = (tab) => { adminTab.value = tab; mobileMenuOpen.value = false; };
+
+        // --- FUNÇÃO DE IMPRESSÃO ---
+        const imprimirRelatorio = () => {
+            window.print();
         };
 
-        // ==========================================
-        // 1. DASHBOARD ESTATÍSTICAS & FILTROS (AJUSTADO)
-        // ==========================================
+        // --- DASHBOARD ---
         const stats = computed(() => {
             const lista = cadastros.value.inspecoes;
             const hoje = new Date().toLocaleDateString('pt-BR');
@@ -69,46 +63,19 @@ createApp({
             };
         });
 
-        // FILTRO HISTÓRICO: HOJE E ONTEM AUTOMÁTICO
         const relatoriosFiltrados = computed(() => {
             return cadastros.value.inspecoes.filter(item => {
                 const matchProduto = filtros.value.produto ? item.produto?.toLowerCase().includes(filtros.value.produto.toLowerCase()) : true;
                 const matchLote = filtros.value.lote ? item.lote?.toLowerCase().includes(filtros.value.lote.toLowerCase()) : true;
+                const matchData = filtros.value.data ? formatarData(item.dataHora).includes(formatarDataInput(filtros.value.data)) : true;
                 const matchPosFolga = filtros.value.posFolga ? item.posFolga === filtros.value.posFolga : true;
-
-                // Lógica de Data (Hoje e Ontem Automático)
-                const itemDateStr = formatarData(item.dataHora); // Formato dd/mm/aaaa
-                let matchData = false;
-
-                if (filtros.value.data) {
-                    // Se usuário escolheu data, usa ela
-                    matchData = itemDateStr === formatarDataInput(filtros.value.data);
-                } else {
-                    // Se não escolheu, mostra HOJE e ONTEM
-                    const hoje = new Date();
-                    const ontem = new Date();
-                    ontem.setDate(ontem.getDate() - 1);
-
-                    const hojeStr = hoje.toLocaleDateString('pt-BR');
-                    const ontemStr = ontem.toLocaleDateString('pt-BR');
-
-                    matchData = (itemDateStr === hojeStr || itemDateStr === ontemStr);
-                }
-
-                return matchProduto && matchLote && matchPosFolga && matchData;
+                return matchProduto && matchLote && matchData && matchPosFolga;
             }).sort((a,b) => b.dataHora - a.dataHora);
         });
 
-        // ==========================================
-        // 2. BUSCA DE PRODUTOS (ADMIN E INSPETOR)
-        // ==========================================
-        
-        // Inspetor (Mantido)
         const produtosFiltrados = computed(() => {
             if (!produtoSearch.value) return cadastros.value.produtos;
-            return cadastros.value.produtos.filter(p => 
-                p.nome.toLowerCase().includes(produtoSearch.value.toLowerCase())
-            );
+            return cadastros.value.produtos.filter(p => p.nome.toLowerCase().includes(produtoSearch.value.toLowerCase()));
         });
 
         const selecionarProduto = (nome) => {
@@ -118,26 +85,15 @@ createApp({
             salvarRascunho();
         };
 
-        // ADMIN: LISTA LIMITADA A 5 E ORDENADA (AJUSTADO)
         const produtosAdminFiltrados = computed(() => {
-            // 1. Cria cópia para não mutar original
             let lista = [...cadastros.value.produtos];
-            
-            // 2. Ordena Alfabeticamente (A-Z)
             lista.sort((a, b) => a.nome.localeCompare(b.nome));
-
-            // 3. Filtra pela busca
             if (filtroAdminProdutos.value) {
                 lista = lista.filter(p => p.nome.toLowerCase().includes(filtroAdminProdutos.value.toLowerCase()));
             }
-
-            // 4. Limita a 5 itens
             return lista.slice(0, 5);
         });
 
-        // ==========================================
-        // 3. ADMIN: EDIÇÃO E REMOÇÃO
-        // ==========================================
         const removerInspecao = async (id) => {
             if(confirm('Tem certeza que deseja EXCLUIR este registro?')) {
                 try { await deleteDoc(doc(db, "inspecoes", id)); notify('Excluído', 'Registro removido.', 'sucesso'); } 
@@ -150,7 +106,6 @@ createApp({
             const rel = relatorioSelecionado.value;
             let novoResultado = 'Aprovado';
             
-            // Recalcula aprovação com os novos valores
             rel.pecas.forEach(p => {
                 Object.values(p.laterais).forEach(v => { if (!getStatusRelatorio(rel, v, 'lateral')) novoResultado = 'Reprovado'; });
                 Object.values(p.centrais).forEach(v => { if (!getStatusRelatorio(rel, v, 'central')) novoResultado = 'Reprovado'; });
@@ -164,9 +119,7 @@ createApp({
             } catch (e) { notify('Erro', 'Falha ao salvar.', 'erro'); }
         };
 
-        // ==========================================
-        // 4. CORE: LOGIN, CADASTRO, INPUTS
-        // ==========================================
+        // --- CORE ---
         const handleLogin = () => {
             loading.value = true;
             setTimeout(() => {
@@ -234,14 +187,32 @@ createApp({
                 Object.values(p.centrais).forEach(v => { if(getStatusClass(v, 'central') === 'status-bad') resultadoGeral = 'Reprovado'; });
             });
             const dados = { inspetor: loginData.value.user, dataHora: new Date(), linha: form.value.linha, produto: form.value.produto, formatoId: form.value.formatoId, formatoNome: configAtiva.value.nome, limitesSnapshot: limitesSnapshot, lote: form.value.lote ? form.value.lote.toUpperCase() : '', posFolga: form.value.posFolga, resultado: resultadoGeral, pecas: form.value.pecas.map(p => ({ laterais: p.laterais, centrais: p.centrais })), status: 'rascunho' };
-            try { if (currentInspectionId.value) { await updateDoc(doc(db, "inspecoes", currentInspectionId.value), dados); } else { const ref = await addDoc(collection(db, "inspecoes"), dados); currentInspectionId.value = ref.id; } } catch (e) { console.error(e); } finally { setTimeout(() => salvandoAuto.value = false, 500); }
+            
+            try { 
+                if (currentInspectionId.value) { 
+                    await updateDoc(doc(db, "inspecoes", currentInspectionId.value), dados); 
+                } else { 
+                    const ref = await addDoc(collection(db, "inspecoes"), dados); 
+                    currentInspectionId.value = ref.id; 
+                } 
+            } catch (e) { 
+                console.error("Erro ao salvar", e); 
+            } finally { 
+                setTimeout(() => salvandoAuto.value = false, 500); 
+            }
         };
 
         const gerarRelatorioFinal = async () => {
             if (!form.value.linha || !form.value.produto || !form.value.formatoId) { notify('Erro', 'Cabeçalho incompleto.', 'erro'); return; }
             if (!form.value.posFolga) { notify('Atenção', 'Preencha se é Pós Folga.', 'erro'); return; }
+            
+            // 1. Garante o salvamento dos dados atuais no banco
             await salvarRascunho(); 
-            if(currentInspectionId.value) await updateDoc(doc(db, "inspecoes", currentInspectionId.value), { status: 'finalizado' });
+            
+            // 2. Atualiza o status para finalizado
+            if(currentInspectionId.value) {
+                await updateDoc(doc(db, "inspecoes", currentInspectionId.value), { status: 'finalizado' });
+            }
 
             const now = new Date();
             const dataStr = now.toLocaleDateString('pt-BR');
@@ -315,7 +286,7 @@ createApp({
         return {
             notificacoes, salvandoAuto, currentView, loginData, handleLogin, logout, loading,
             adminTab, mobileMenuOpen, navigateAdmin, cadastros, filtros, relatoriosFiltrados, limparFiltros,
-            relatorioSelecionado, abrirDetalhesRelatorio, getStatusRelatorio, salvarAlteracoesAdmin, removerInspecao,
+            relatorioSelecionado, abrirDetalhesRelatorio, getStatusRelatorio, salvarAlteracoesAdmin, removerInspecao, imprimirRelatorio,
             form, mascararInput, getStatusClass, adicionarPeca, removerPeca, salvarRascunho, gerarRelatorioFinal, reportText, novaInspecaoLimpa,
             novoFormato, novoItemSimples, removerItem, atualizarFormato, atualizarItemSimples,
             formatarData, copiarTexto, enviarZap, stats, novoUsuarioForm, cadastrarUsuario,
