@@ -16,13 +16,8 @@ createApp({
         const isDarkMode = ref(false);
         const toggleDarkMode = () => {
             isDarkMode.value = !isDarkMode.value;
-            if (isDarkMode.value) {
-                document.documentElement.classList.add('dark');
-                localStorage.setItem('theme', 'dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-                localStorage.setItem('theme', 'light');
-            }
+            if (isDarkMode.value) { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark'); } 
+            else { document.documentElement.classList.remove('dark'); localStorage.setItem('theme', 'light'); }
         };
 
         const currentView = ref('login'); 
@@ -46,32 +41,47 @@ createApp({
 
         const navigateAdmin = (tab) => { adminTab.value = tab; mobileMenuOpen.value = false; };
 
-        // --- FUNÇÃO GERAR IMAGEM (CORRIGIDA) ---
+        // --- FUNÇÃO GERAR IMAGEM (CORRIGIDA: INPUTS -> TEXTO) ---
         const baixarPrintRelatorio = async () => {
             const btn = document.getElementById('btn-print-action');
             if(btn) btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Gerando...';
 
             try {
                 const original = document.getElementById('modal-relatorio-content');
-                
-                // Clone para renderizar tudo (scroll infinito)
                 const clone = original.cloneNode(true);
+                
                 clone.style.position = 'fixed';
                 clone.style.top = '-10000px';
                 clone.style.left = '0';
-                clone.style.width = '800px';
-                clone.style.height = 'auto';
+                clone.style.width = '800px'; 
+                clone.style.height = 'auto'; 
                 clone.style.zIndex = '-1000';
                 clone.style.overflow = 'visible';
                 clone.style.backgroundColor = isDarkMode.value ? '#0f172a' : '#ffffff';
                 clone.classList.remove('h-full', 'max-h-[90vh]');
 
+                // Remove scroll do clone
                 const scrollableDiv = clone.querySelector('.overflow-y-auto');
                 if (scrollableDiv) {
                     scrollableDiv.classList.remove('overflow-y-auto', 'flex-1', 'h-full');
                     scrollableDiv.style.height = 'auto';
                     scrollableDiv.style.overflow = 'visible';
                 }
+
+                // SUBSTIUI INPUTS POR TEXTO (Fix para valores sumindo)
+                const inputs = clone.querySelectorAll('input');
+                inputs.forEach(input => {
+                    const span = document.createElement('div');
+                    span.innerText = input.value;
+                    span.style.textAlign = 'center';
+                    span.style.fontWeight = 'bold';
+                    span.style.fontSize = '14px';
+                    span.style.color = isDarkMode.value ? '#e2e8f0' : '#1e293b';
+                    if (input.classList.contains('border-red-500')) {
+                        span.style.color = '#ef4444'; // Vermelho se erro
+                    }
+                    if(input.parentNode) input.parentNode.replaceChild(span, input);
+                });
 
                 document.body.appendChild(clone);
 
@@ -83,24 +93,12 @@ createApp({
                 
                 document.body.removeChild(clone);
 
-                // --- CORREÇÃO DA DATA PARA NOME DE ARQUIVO ---
                 let dataSegura;
                 const rawData = relatorioSelecionado.value.dataHora;
+                if (rawData && rawData.seconds) dataSegura = new Date(rawData.seconds * 1000);
+                else dataSegura = rawData ? new Date(rawData) : new Date();
 
-                if (rawData && rawData.seconds) {
-                    // É Timestamp do Firebase
-                    dataSegura = new Date(rawData.seconds * 1000);
-                } else {
-                    // É Date ou String ou Hoje
-                    dataSegura = rawData ? new Date(rawData) : new Date();
-                }
-
-                // Formata DD-MM-AAAA_HH-MM (Sem barras que quebram o download)
-                const nomeArquivoData = dataSegura.toLocaleString('pt-BR')
-                    .replace(/\//g, '-')   // Troca / por -
-                    .replace(/:/g, '-')    // Troca : por -
-                    .replace(', ', '_');   // Troca espaço por _
-
+                const nomeArquivoData = dataSegura.toLocaleString('pt-BR').replace(/\//g, '-').replace(/:/g, '-').replace(', ', '_');
                 const link = document.createElement('a');
                 link.download = `Relatorio_${nomeArquivoData}.png`;
                 link.href = canvas.toDataURL("image/png");
@@ -132,21 +130,10 @@ createApp({
                 const matchProduto = filtros.value.produto ? item.produto?.toLowerCase().includes(filtros.value.produto.toLowerCase()) : true;
                 const matchLote = filtros.value.lote ? item.lote?.toLowerCase().includes(filtros.value.lote.toLowerCase()) : true;
                 const matchPosFolga = filtros.value.posFolga ? item.posFolga === filtros.value.posFolga : true;
-                
                 const itemDateStr = formatarData(item.dataHora);
                 let matchData = false;
-
-                if (filtros.value.data) {
-                    matchData = itemDateStr === formatarDataInput(filtros.value.data);
-                } else {
-                    const hoje = new Date();
-                    const ontem = new Date();
-                    ontem.setDate(ontem.getDate() - 1);
-                    const hojeStr = hoje.toLocaleDateString('pt-BR');
-                    const ontemStr = ontem.toLocaleDateString('pt-BR');
-                    matchData = (itemDateStr === hojeStr || itemDateStr === ontemStr);
-                }
-
+                if (filtros.value.data) { matchData = itemDateStr === formatarDataInput(filtros.value.data); } 
+                else { const hoje = new Date().toLocaleDateString('pt-BR'); const ontem = new Date(); ontem.setDate(ontem.getDate() - 1); const ontemStr = ontem.toLocaleDateString('pt-BR'); matchData = (itemDateStr === hoje || itemDateStr === ontemStr); }
                 return matchProduto && matchLote && matchPosFolga && matchData;
             }).sort((a,b) => b.dataHora - a.dataHora);
         });
@@ -181,8 +168,7 @@ createApp({
         const gerarRelatorioFinal = async () => {
             if (!form.value.linha || !form.value.produto || !form.value.formatoId) { notify('Erro', 'Cabeçalho incompleto.', 'erro'); return; }
             if (!form.value.posFolga) { notify('Atenção', 'Preencha se é Pós Folga.', 'erro'); return; }
-            await salvarRascunho(); 
-            if(currentInspectionId.value) await updateDoc(doc(db, "inspecoes", currentInspectionId.value), { status: 'finalizado' });
+            await salvarRascunho(); if(currentInspectionId.value) await updateDoc(doc(db, "inspecoes", currentInspectionId.value), { status: 'finalizado' });
             const now = new Date(); const dataStr = now.toLocaleDateString('pt-BR'); const conf = configAtiva.value;
             let txt = `*RELATÓRIO DE EMPENO*\n*Data:* ${dataStr} ${now.toLocaleTimeString().slice(0,5)}\n*Responsável:* ${loginData.value.user}\n`;
             if (form.value.posFolga === 'Sim') txt += `*Pós Folga:* Sim\n`;
@@ -198,17 +184,7 @@ createApp({
         const adicionarPeca = () => { form.value.pecas.push({ laterais: {A:null,B:null,C:null,D:null}, lateraisDisplay: {A:'',B:'',C:'',D:''}, centrais: {1:null,2:null}, centraisDisplay: {1:'',2:''} }); salvarRascunho(); };
         const removerPeca = (idx) => { if (form.value.pecas.length > 0) { form.value.pecas.splice(idx, 1); salvarRascunho(); } };
         const formatarData = (ts) => ts && ts.seconds ? new Date(ts.seconds * 1000).toLocaleDateString('pt-BR') : '-';
-        
-        // CORRIGIDO: Agora aceita string para filtro
-        const formatarDataInput = (d) => {
-            if(!d) return '';
-            // Se vier do input type=date (yyyy-mm-dd)
-            if (typeof d === 'string' && d.includes('-')) {
-                return d.split('-').reverse().join('/');
-            }
-            return '';
-        };
-
+        const formatarDataInput = (d) => d ? d.split('-').reverse().join('/') : '';
         const abrirDetalhesRelatorio = (r) => relatorioSelecionado.value = r;
         const limparFiltros = () => filtros.value = { data: '', produto: '', lote: '', posFolga: '' };
         const logout = () => { currentView.value = 'login'; loginData.value = { user: '', pass: '', remember: false }; localStorage.removeItem('qc_user'); localStorage.removeItem('qc_pass'); };
