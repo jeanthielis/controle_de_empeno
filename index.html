@@ -14,7 +14,6 @@
     </script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script type="importmap">
@@ -34,6 +33,7 @@
         }
         .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
+        
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
@@ -52,49 +52,174 @@
 
         <div class="fixed top-16 right-4 z-[9999] flex flex-col gap-2 w-full max-w-sm pointer-events-none no-print">
             <transition-group name="toast">
-                <div v-for="notif in notificacoes" :key="notif.id" :class="['pointer-events-auto p-4 rounded-xl shadow-xl border flex items-center gap-3 transform transition-all duration-300', isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white', notif.tipo === 'sucesso' ? 'text-green-600 dark:text-green-400 border-green-500' : notif.tipo === 'erro' ? 'text-red-500 dark:text-red-400 border-red-500' : 'text-blue-500 dark:text-blue-400 border-blue-500']"><i class="ph-fill ph-info text-2xl"></i><div><h4 class="font-bold text-sm">{{ notif.titulo }}</h4><p class="text-xs opacity-90">{{ notif.mensagem }}</p></div></div>
+                <div v-for="notif in notificacoes" :key="notif.id" 
+                     :class="['pointer-events-auto p-4 rounded-xl shadow-xl border flex items-center gap-3 transform transition-all duration-300', 
+                              isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white',
+                              notif.tipo === 'sucesso' ? 'text-green-600 dark:text-green-400 border-green-500' : 
+                              notif.tipo === 'erro' ? 'text-red-500 dark:text-red-400 border-red-500' : 'text-blue-500 dark:text-blue-400 border-blue-500']">
+                    <i class="ph-fill ph-info text-2xl"></i>
+                    <div><h4 class="font-bold text-sm">{{ notif.titulo }}</h4><p class="text-xs opacity-90">{{ notif.mensagem }}</p></div>
+                </div>
             </transition-group>
         </div>
 
         <div v-if="currentView === 'login'" class="flex-1 flex items-center justify-center px-4">
             <div class="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100 dark:border-slate-800">
-                <div class="text-center mb-6"><div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300 mb-4"><i class="ph ph-hexagon text-2xl"></i></div><h1 class="text-2xl font-bold">QualityControl</h1><p class="text-xs text-gray-500 dark:text-gray-400">Sistema de Gestão de Qualidade</p></div>
+                <div class="text-center mb-6">
+                    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300 mb-4">
+                        <i class="ph ph-hexagon text-2xl"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold">QualityControl</h1>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Sistema de Gestão de Qualidade</p>
+                </div>
                 <form @submit.prevent="handleLogin" class="space-y-4">
-                    <div><label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Usuário</label><input type="text" v-model="loginData.user" @input="loginData.user = loginData.user.toLowerCase()" class="input-clean lowercase" placeholder="nome.sobrenome"></div>
-                    <div><label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Senha</label><input type="password" v-model="loginData.pass" class="input-clean" placeholder="••••••••"></div>
-                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" v-model="loginData.remember" class="w-4 h-4 text-blue-600 rounded dark:bg-slate-950 dark:border-slate-700"><span class="text-sm text-gray-600 dark:text-gray-300">Manter conectado</span></label>
-                    <button type="submit" class="btn-primary w-full py-3"><span v-if="loading">Acessando...</span><span v-else>Entrar</span></button>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Usuário</label>
+                        <input type="text" v-model="loginData.user" @input="loginData.user = loginData.user.toLowerCase()" class="input-clean lowercase" placeholder="nome.sobrenome">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Senha</label>
+                        <input type="password" v-model="loginData.pass" class="input-clean" placeholder="••••••••">
+                    </div>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" v-model="loginData.remember" class="w-4 h-4 text-blue-600 rounded dark:bg-slate-950 dark:border-slate-700">
+                        <span class="text-sm text-gray-600 dark:text-gray-300">Manter conectado</span>
+                    </label>
+                    <button type="submit" class="btn-primary w-full py-3">
+                        <span v-if="loading">Acessando...</span>
+                        <span v-else>Entrar</span>
+                    </button>
                 </form>
             </div>
         </div>
 
         <div v-else-if="currentView === 'admin'" class="flex h-screen overflow-hidden relative">
-            <transition name="fade"><div v-if="mobileMenuOpen" @click="mobileMenuOpen = false" class="fixed inset-0 bg-black/60 z-20 md:hidden backdrop-blur-sm"></div></transition>
+            <transition name="fade">
+                <div v-if="mobileMenuOpen" @click="mobileMenuOpen = false" class="fixed inset-0 bg-black/60 z-20 md:hidden backdrop-blur-sm"></div>
+            </transition>
+
             <aside :class="['fixed md:static inset-y-0 left-0 z-30 w-64 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 flex flex-col transition-transform duration-300 ease-in-out transform', mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
-                <div class="p-6 border-b border-gray-100 dark:border-slate-800 font-bold text-lg text-blue-600 dark:text-blue-400 flex items-center justify-between"><div class="flex items-center gap-2"><i class="ph ph-sliders"></i> Admin</div><button @click="mobileMenuOpen = false" class="md:hidden text-gray-500 hover:text-red-500"><i class="ph ph-x text-2xl"></i></button></div>
+                <div class="p-6 border-b border-gray-100 dark:border-slate-800 font-bold text-lg text-blue-600 dark:text-blue-400 flex items-center justify-between">
+                    <div class="flex items-center gap-2"><i class="ph ph-sliders"></i> Admin</div>
+                    <button @click="mobileMenuOpen = false" class="md:hidden text-gray-500 hover:text-red-500"><i class="ph ph-x text-2xl"></i></button>
+                </div>
                 <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
                     <button @click="navigateAdmin('dashboard')" :class="['nav-item', adminTab === 'dashboard' ? 'active' : '']"><i class="ph ph-chart-pie-slice"></i> Dashboard</button>
                     <button @click="navigateAdmin('usuarios')" :class="['nav-item', adminTab === 'usuarios' ? 'active' : '']"><i class="ph ph-users"></i> Usuários</button>
                     <button @click="navigateAdmin('formatos')" :class="['nav-item', adminTab === 'formatos' ? 'active' : '']"><i class="ph ph-ruler"></i> Formatos</button>
                     <button @click="navigateAdmin('cadastros')" :class="['nav-item', adminTab === 'cadastros' ? 'active' : '']"><i class="ph ph-package"></i> Produtos/Linhas</button>
                 </nav>
-                <div class="p-4 border-t border-gray-100 dark:border-slate-800"><button @click="logout" class="nav-item text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"><i class="ph ph-sign-out"></i> Sair</button></div>
+                <div class="p-4 border-t border-gray-100 dark:border-slate-800">
+                    <button @click="logout" class="nav-item text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"><i class="ph ph-sign-out"></i> Sair</button>
+                </div>
             </aside>
 
             <main class="flex-1 overflow-y-auto bg-gray-50 dark:bg-slate-950 p-6 w-full">
-                <div class="md:hidden flex items-center gap-4 mb-6"><button @click="mobileMenuOpen = true" class="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-200"><i class="ph ph-list text-2xl"></i></button><h1 class="font-bold text-lg text-gray-800 dark:text-white">Painel Admin</h1></div>
+                
+                <div class="md:hidden flex items-center gap-4 mb-6">
+                    <button @click="mobileMenuOpen = true" class="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-200">
+                        <i class="ph ph-list text-2xl"></i>
+                    </button>
+                    <h1 class="font-bold text-lg text-gray-800 dark:text-white">Painel Admin</h1>
+                </div>
 
                 <div v-if="adminTab === 'dashboard'">
                     <h2 class="text-2xl font-bold mb-6 hidden md:block">Dashboard</h2>
                     
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                        <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border dark:border-slate-800 shadow-sm"><div class="text-gray-400 text-xs font-bold uppercase mb-1">Total Inspeções</div><div class="text-3xl font-bold dark:text-white">{{ stats.total }}</div></div>
-                        <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border dark:border-slate-800 shadow-sm"><div class="text-gray-400 text-xs font-bold uppercase mb-1">Pós Folga</div><div class="text-3xl font-bold text-blue-600 dark:text-blue-400">{{ stats.posFolga }}</div></div>
-                        <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border dark:border-slate-800 shadow-sm"><div class="text-gray-400 text-xs font-bold uppercase mb-1">Reprovados</div><div class="text-3xl font-bold text-red-600 dark:text-red-400">{{ stats.reprovados }}</div></div>
-                        <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border dark:border-slate-800 shadow-sm"><div class="text-gray-400 text-xs font-bold uppercase mb-1">Hoje</div><div class="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{{ stats.hoje }}</div></div>
+                        <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border dark:border-slate-800 shadow-sm">
+                            <div class="text-gray-400 text-xs font-bold uppercase mb-1">Total Inspeções</div>
+                            <div class="text-3xl font-bold dark:text-white">{{ stats.total }}</div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border dark:border-slate-800 shadow-sm">
+                            <div class="text-gray-400 text-xs font-bold uppercase mb-1">Pós Folga</div>
+                            <div class="text-3xl font-bold text-blue-600 dark:text-blue-400">{{ stats.posFolga }}</div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border dark:border-slate-800 shadow-sm">
+                            <div class="text-gray-400 text-xs font-bold uppercase mb-1">Reprovados</div>
+                            <div class="text-3xl font-bold text-red-600 dark:text-red-400">{{ stats.reprovados }}</div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border dark:border-slate-800 shadow-sm">
+                            <div class="text-gray-400 text-xs font-bold uppercase mb-1">Hoje</div>
+                            <div class="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{{ stats.hoje }}</div>
+                        </div>
                     </div>
 
-                    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 mb-8 p-4">
+                    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden mb-8">
+                        <div class="p-4 border-b bg-gray-50 dark:bg-slate-900 dark:border-slate-800 font-bold text-gray-700 dark:text-gray-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <span>Histórico Recente</span>
+                            <div class="flex flex-wrap gap-2 w-full md:w-auto">
+                                <input v-model="filtros.lote" placeholder="Lote" class="input-clean py-1.5 text-xs w-20">
+                                <input v-model="filtros.produto" placeholder="Produto" class="input-clean py-1.5 text-xs flex-1 md:w-32">
+                                <input type="date" v-model="filtros.data" class="input-clean py-1.5 text-xs w-28">
+                                <select v-model="filtros.posFolga" class="input-clean py-1.5 text-xs w-24">
+                                    <option value="">PosFolga: Todos</option><option value="Sim">Sim</option><option value="Não">Não</option>
+                                </select>
+                                <button @click="limparFiltros" class="text-xs text-red-500 hover:underline">Limpar</button>
+                            </div>
+                        </div>
+
+                        <div class="md:hidden divide-y divide-gray-100 dark:divide-slate-800">
+                            <div v-for="rel in relatoriosFiltrados" :key="rel.id" class="p-4 hover:bg-gray-50 dark:hover:bg-slate-800 transition">
+                                <div class="flex justify-between items-start mb-2">
+                                    <div>
+                                        <div class="text-sm font-bold text-gray-800 dark:text-white">{{ rel.produto }}</div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400">Lote: {{ rel.lote }}</div>
+                                    </div>
+                                    <span v-if="rel.resultado === 'Aprovado'" class="text-[10px] bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 px-2 py-1 rounded-full font-bold">OK</span>
+                                    <span v-else class="text-[10px] bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 px-2 py-1 rounded-full font-bold">FORA</span>
+                                </div>
+                                <div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400 mb-3">
+                                    <div class="flex items-center gap-2"><i class="ph ph-user"></i> {{ rel.inspetor }}</div>
+                                    <div class="flex items-center gap-2"><i class="ph ph-calendar"></i> {{ formatarData(rel.dataHora) }}</div>
+                                </div>
+                                <div v-if="rel.posFolga === 'Sim'" class="mb-3">
+                                    <span class="text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-1.5 py-0.5 rounded font-bold uppercase">Pós Folga</span>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button @click="abrirDetalhesRelatorio(rel)" class="flex-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 py-2 rounded-lg text-xs font-bold hover:bg-blue-100 flex justify-center items-center gap-1"><i class="ph-bold ph-pencil-simple"></i> Editar</button>
+                                    <button @click="removerInspecao(rel.id)" class="px-3 bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 rounded-lg text-xs hover:bg-red-100"><i class="ph-bold ph-trash"></i></button>
+                                </div>
+                            </div>
+                            <div v-if="relatoriosFiltrados.length === 0" class="p-8 text-center text-sm text-gray-400">Nenhum registro encontrado.</div>
+                        </div>
+
+                        <div class="hidden md:block overflow-x-auto">
+                            <table class="w-full text-left text-sm whitespace-nowrap">
+                                <thead class="bg-gray-50 dark:bg-slate-950 border-b border-gray-200 dark:border-slate-800 text-gray-500">
+                                    <tr>
+                                        <th class="p-4">Data</th>
+                                        <th class="p-4">Status</th>
+                                        <th class="p-4">Inspetor</th>
+                                        <th class="p-4">Produto</th>
+                                        <th class="p-4 text-right">Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-slate-800">
+                                    <tr v-for="rel in relatoriosFiltrados" :key="rel.id" class="hover:bg-blue-50 dark:hover:bg-blue-900/10 transition">
+                                        <td class="p-4 text-gray-700 dark:text-gray-300">
+                                            {{ formatarData(rel.dataHora) }}
+                                            <div v-if="rel.posFolga === 'Sim'" class="mt-1"><span class="bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase">Pós Folga</span></div>
+                                        </td>
+                                        <td class="p-4">
+                                            <span v-if="rel.resultado === 'Aprovado'" class="text-green-600 dark:text-green-400 font-bold bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded text-xs">APROVADO</span>
+                                            <span v-else class="text-red-600 dark:text-red-400 font-bold bg-red-100 dark:bg-red-900/30 px-2 py-1 rounded text-xs">REPROVADO</span>
+                                        </td>
+                                        <td class="p-4 font-bold text-gray-700 dark:text-gray-300">{{ rel.inspetor }}</td>
+                                        <td class="p-4 text-xs text-gray-500 dark:text-gray-400">{{ rel.produto }} <br> Lote: {{ rel.lote }}</td>
+                                        <td class="p-4 text-right">
+                                            <div class="flex justify-end gap-3">
+                                                <button @click="abrirDetalhesRelatorio(rel)" class="text-blue-500 hover:text-blue-700 dark:text-blue-400 transition-transform hover:scale-110"><i class="ph ph-pencil-simple text-xl"></i></button>
+                                                <button @click="removerInspecao(rel.id)" class="text-red-400 hover:text-red-600 transition-transform hover:scale-110"><i class="ph ph-trash text-xl"></i></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 mb-8 p-4 mt-8">
                         <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
                             <h3 class="font-bold dark:text-white flex items-center gap-2"><i class="ph-fill ph-chart-bar text-blue-500"></i> Análise Diária</h3>
                             <div class="flex gap-2">
@@ -109,44 +234,31 @@
                             <canvas id="qualityChart"></canvas>
                         </div>
                     </div>
-
-                    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden">
-                        <div class="p-4 border-b bg-gray-50 dark:bg-slate-900 dark:border-slate-800 font-bold text-gray-700 dark:text-gray-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                            <span>Histórico Recente</span>
-                            <div class="flex flex-wrap gap-2 w-full md:w-auto">
-                                <input v-model="filtros.lote" placeholder="Lote" class="input-clean py-1.5 text-xs w-20">
-                                <input v-model="filtros.produto" placeholder="Produto" class="input-clean py-1.5 text-xs flex-1 md:w-32">
-                                <input type="date" v-model="filtros.data" class="input-clean py-1.5 text-xs w-28">
-                                <select v-model="filtros.posFolga" class="input-clean py-1.5 text-xs w-24"><option value="">PosFolga: Todos</option><option value="Sim">Sim</option><option value="Não">Não</option></select>
-                                <button @click="limparFiltros" class="text-xs text-red-500 hover:underline">Limpar</button>
-                            </div>
-                        </div>
-                        <div class="md:hidden divide-y divide-gray-100 dark:divide-slate-800">
-                            <div v-for="rel in relatoriosFiltrados" :key="rel.id" class="p-4 hover:bg-gray-50 dark:hover:bg-slate-800 transition">
-                                <div class="flex justify-between items-start mb-2"><div><div class="text-sm font-bold text-gray-800 dark:text-white">{{ rel.produto }}</div><div class="text-xs text-gray-500 dark:text-gray-400">Lote: {{ rel.lote }}</div></div><span v-if="rel.resultado === 'Aprovado'" class="text-[10px] bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 px-2 py-1 rounded-full font-bold">OK</span><span v-else class="text-[10px] bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 px-2 py-1 rounded-full font-bold">FORA</span></div>
-                                <div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400 mb-3"><div class="flex items-center gap-2"><i class="ph ph-user"></i> {{ rel.inspetor }}</div><div class="flex items-center gap-2"><i class="ph ph-calendar"></i> {{ formatarData(rel.dataHora) }}</div></div>
-                                <div v-if="rel.posFolga === 'Sim'" class="mb-3"><span class="text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-1.5 py-0.5 rounded font-bold uppercase">Pós Folga</span></div>
-                                <div class="flex gap-2"><button @click="abrirDetalhesRelatorio(rel)" class="flex-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 py-2 rounded-lg text-xs font-bold hover:bg-blue-100 flex justify-center items-center gap-1"><i class="ph-bold ph-pencil-simple"></i> Editar</button><button @click="removerInspecao(rel.id)" class="px-3 bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 rounded-lg text-xs hover:bg-red-100"><i class="ph-bold ph-trash"></i></button></div>
-                            </div>
-                            <div v-if="relatoriosFiltrados.length === 0" class="p-8 text-center text-sm text-gray-400">Nenhum registro encontrado.</div>
-                        </div>
-                        <div class="hidden md:block overflow-x-auto">
-                            <table class="w-full text-left text-sm whitespace-nowrap">
-                                <thead class="bg-gray-50 dark:bg-slate-950 border-b border-gray-200 dark:border-slate-800 text-gray-500"><tr><th class="p-4">Data</th><th class="p-4">Status</th><th class="p-4">Inspetor</th><th class="p-4">Produto</th><th class="p-4 text-right">Ação</th></tr></thead>
-                                <tbody class="divide-y divide-gray-100 dark:divide-slate-800">
-                                    <tr v-for="rel in relatoriosFiltrados" :key="rel.id" class="hover:bg-blue-50 dark:hover:bg-blue-900/10 transition"><td class="p-4 text-gray-700 dark:text-gray-300">{{ formatarData(rel.dataHora) }}<div v-if="rel.posFolga === 'Sim'" class="mt-1"><span class="bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase">Pós Folga</span></div></td><td class="p-4"><span v-if="rel.resultado === 'Aprovado'" class="text-green-600 dark:text-green-400 font-bold bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded text-xs">APROVADO</span><span v-else class="text-red-600 dark:text-red-400 font-bold bg-red-100 dark:bg-red-900/30 px-2 py-1 rounded text-xs">REPROVADO</span></td><td class="p-4 font-bold text-gray-700 dark:text-gray-300">{{ rel.inspetor }}</td><td class="p-4 text-xs text-gray-500 dark:text-gray-400">{{ rel.produto }} <br> Lote: {{ rel.lote }}</td><td class="p-4 text-right"><div class="flex justify-end gap-3"><button @click="abrirDetalhesRelatorio(rel)" class="text-blue-500 hover:text-blue-700 dark:text-blue-400 transition-transform hover:scale-110"><i class="ph ph-pencil-simple text-xl"></i></button><button @click="removerInspecao(rel.id)" class="text-red-400 hover:text-red-600 transition-transform hover:scale-110"><i class="ph ph-trash text-xl"></i></button></div></td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
                 </div>
 
-                <div v-if="adminTab === 'usuarios'"></div>
-                <div v-if="adminTab === 'formatos'"></div>
-                <div v-if="adminTab === 'cadastros'"></div>
-                <div v-if="adminTab === 'usuarios'"><h2 class="text-2xl font-bold mb-6 hidden md:block">Usuários</h2><div class="bg-white dark:bg-slate-900 p-6 rounded-xl border dark:border-slate-800 shadow-sm mb-8"><h3 class="font-bold mb-4 text-blue-600 dark:text-blue-400">Novo Cadastro</h3><div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end"><div><label class="block text-xs font-bold text-gray-400 uppercase mb-1">Nome Completo</label><input v-model="novoUsuarioForm.nome" class="input-clean w-full" placeholder="Ex: Jean Carlos"></div><div><label class="block text-xs font-bold text-gray-400 uppercase mb-1">Matrícula</label><input v-model="novoUsuarioForm.matricula" class="input-clean w-full" placeholder="Ex: 12345"></div><div><label class="flex items-center gap-2 cursor-pointer bg-gray-50 dark:bg-slate-950 p-2.5 rounded-lg border border-gray-200 dark:border-slate-800 hover:bg-gray-100 dark:hover:bg-slate-800"><input type="checkbox" v-model="novoUsuarioForm.admin" class="w-4 h-4 text-blue-600 rounded dark:bg-slate-700 dark:border-slate-600"><span class="text-sm font-bold text-gray-600 dark:text-gray-300">Admin?</span></label></div><button @click="cadastrarUsuario" class="btn-primary w-full h-[42px]">Cadastrar</button></div></div><div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border dark:border-slate-800 p-4"><div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead><tr class="text-gray-500 border-b dark:border-slate-800"><th class="pb-2">Nome</th><th class="pb-2">Login</th><th class="pb-2">Acesso</th><th class="pb-2 text-right">Ação</th></tr></thead><tbody><tr v-for="u in cadastros.usuarios" :key="u.id" class="border-b dark:border-slate-800 last:border-0 hover:bg-gray-50 dark:hover:bg-slate-800"><td class="py-3 font-bold text-gray-700 dark:text-gray-300">{{ u.nome }}</td><td class="py-3 font-mono text-blue-600 dark:text-blue-400">{{ u.login }}</td><td class="py-3"><span :class="u.admin ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'" class="px-2 py-1 rounded text-xs font-bold">{{ u.admin ? 'ADMIN' : 'INSPETOR' }}</span></td><td class="py-3 text-right"><button @click="removerItem('usuarios', u.id)" class="text-red-400 hover:text-red-600"><i class="ph ph-trash"></i></button></td></tr></tbody></table></div></div></div>
-                <div v-if="adminTab === 'formatos'"><div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold hidden md:block">Formatos</h2><button @click="novoFormato" class="btn-primary py-2 px-4 shadow-lg shadow-blue-500/20"><i class="ph ph-plus-circle mr-2"></i> Novo</button></div><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"><div v-for="fmt in cadastros.formatos" :key="fmt.id" class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-800 p-6 relative group hover:shadow-md transition-all"><button @click="removerItem('formatos', fmt.id)" class="absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors"><i class="ph ph-trash text-xl"></i></button><div class="mb-6"><label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Nome</label><input v-model="fmt.nome" @change="atualizarFormato(fmt)" class="block w-full text-xl font-bold text-blue-600 dark:text-blue-400 border-b border-dashed border-gray-300 dark:border-gray-600 focus:border-blue-500 outline-none bg-transparent pb-1"></div><div class="space-y-4"><div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-100 dark:border-blue-800"><div class="flex items-center gap-2 mb-2"><i class="ph-fill ph-arrows-vertical text-blue-500"></i><span class="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase">Lateral</span></div><div class="flex items-center justify-between gap-2"><input type="number" step="0.01" v-model.number="fmt.latMin" @change="atualizarFormato(fmt)" class="input-clean text-center text-sm font-bold w-full"><span class="text-blue-300 font-bold">/</span><input type="number" step="0.01" v-model.number="fmt.latMax" @change="atualizarFormato(fmt)" class="input-clean text-center text-sm font-bold w-full"></div></div><div class="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl border border-emerald-100 dark:border-emerald-800"><div class="flex items-center gap-2 mb-2"><i class="ph-fill ph-arrows-in-cardinal text-emerald-500"></i><span class="text-xs font-bold text-emerald-700 dark:text-emerald-300 uppercase">Central</span></div><div class="flex items-center justify-between gap-2"><input type="number" step="0.01" v-model.number="fmt.centMin" @change="atualizarFormato(fmt)" class="input-clean text-center text-sm font-bold w-full"><span class="text-emerald-300 font-bold">/</span><input type="number" step="0.01" v-model.number="fmt.centMax" @change="atualizarFormato(fmt)" class="input-clean text-center text-sm font-bold w-full"></div></div></div></div></div></div>
-                <div v-if="adminTab === 'cadastros'"><h2 class="text-2xl font-bold mb-6 hidden md:block">Cadastros Básicos</h2><div class="grid md:grid-cols-2 gap-8"><div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-800 flex flex-col h-[500px]"><div class="p-5 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-900 rounded-t-2xl"><h3 class="font-bold flex items-center gap-2"><i class="ph-fill ph-package text-blue-500"></i> Produtos</h3><button @click="novoItemSimples('produtos')" class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 font-bold">+ Adicionar</button></div><div class="p-4 border-b border-gray-100 dark:border-slate-800"><input v-model="filtroAdminProdutos" placeholder="Buscar..." class="input-clean pl-9 bg-[url('https://unpkg.com/@phosphor-icons/web/src/regular/magnifying-glass.svg')] bg-no-repeat bg-[10px_center]"></div><div class="overflow-y-auto flex-1 p-2"><div v-for="p in produtosAdminFiltrados" :key="p.id" class="group flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg transition-colors border-b border-gray-50 dark:border-slate-800 last:border-0"><input v-model="p.nome" @change="atualizarItemSimples('produtos', p)" class="bg-transparent outline-none w-full text-sm font-medium focus:text-blue-600 text-gray-700 dark:text-gray-300"><button @click="removerItem('produtos', p.id)" class="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-opacity p-2"><i class="ph-bold ph-trash"></i></button></div></div></div><div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-800 flex flex-col h-[500px]"><div class="p-5 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-900 rounded-t-2xl"><h3 class="font-bold flex items-center gap-2"><i class="ph-fill ph-factory text-emerald-500"></i> Linhas</h3><button @click="novoItemSimples('linhas')" class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-700 font-bold">+ Adicionar</button></div><div class="overflow-y-auto flex-1 p-2"><div v-for="l in cadastros.linhas" :key="l.id" class="group flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg transition-colors border-b border-gray-50 dark:border-slate-800 last:border-0"><input v-model="l.nome" @change="atualizarItemSimples('linhas', l)" class="bg-transparent outline-none w-full text-sm font-medium focus:text-emerald-600 text-gray-700 dark:text-gray-300"><button @click="removerItem('linhas', l.id)" class="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-opacity p-2"><i class="ph-bold ph-trash"></i></button></div></div></div></div></div>
+                <div v-if="adminTab === 'usuarios'">
+                    <h2 class="text-2xl font-bold mb-6 hidden md:block">Usuários</h2>
+                    <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border dark:border-slate-800 shadow-sm mb-8">
+                        <h3 class="font-bold mb-4 text-blue-600 dark:text-blue-400">Novo Cadastro</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                            <div><label class="block text-xs font-bold text-gray-400 uppercase mb-1">Nome Completo</label><input v-model="novoUsuarioForm.nome" class="input-clean w-full" placeholder="Ex: Jean Carlos"></div>
+                            <div><label class="block text-xs font-bold text-gray-400 uppercase mb-1">Matrícula</label><input v-model="novoUsuarioForm.matricula" class="input-clean w-full" placeholder="Ex: 12345"></div>
+                            <div><label class="flex items-center gap-2 cursor-pointer bg-gray-50 dark:bg-slate-950 p-2.5 rounded-lg border border-gray-200 dark:border-slate-800 hover:bg-gray-100 dark:hover:bg-slate-800"><input type="checkbox" v-model="novoUsuarioForm.admin" class="w-4 h-4 text-blue-600 rounded dark:bg-slate-700 dark:border-slate-600"><span class="text-sm font-bold text-gray-600 dark:text-gray-300">Admin?</span></label></div>
+                            <button @click="cadastrarUsuario" class="btn-primary w-full h-[42px]">Cadastrar</button>
+                        </div>
+                    </div>
+                    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border dark:border-slate-800 p-4"><div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead><tr class="text-gray-500 border-b dark:border-slate-800"><th class="pb-2">Nome</th><th class="pb-2">Login</th><th class="pb-2">Acesso</th><th class="pb-2 text-right">Ação</th></tr></thead><tbody><tr v-for="u in cadastros.usuarios" :key="u.id" class="border-b dark:border-slate-800 last:border-0 hover:bg-gray-50 dark:hover:bg-slate-800"><td class="py-3 font-bold text-gray-700 dark:text-gray-300">{{ u.nome }}</td><td class="py-3 font-mono text-blue-600 dark:text-blue-400">{{ u.login }}</td><td class="py-3"><span :class="u.admin ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'" class="px-2 py-1 rounded text-xs font-bold">{{ u.admin ? 'ADMIN' : 'INSPETOR' }}</span></td><td class="py-3 text-right"><button @click="removerItem('usuarios', u.id)" class="text-red-400 hover:text-red-600"><i class="ph ph-trash"></i></button></td></tr></tbody></table></div></div>
+                </div>
+
+                <div v-if="adminTab === 'formatos'">
+                    <div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold hidden md:block">Formatos</h2><button @click="novoFormato" class="btn-primary py-2 px-4 shadow-lg shadow-blue-500/20"><i class="ph ph-plus-circle mr-2"></i> Novo</button></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"><div v-for="fmt in cadastros.formatos" :key="fmt.id" class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-800 p-6 relative group hover:shadow-md transition-all"><button @click="removerItem('formatos', fmt.id)" class="absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors"><i class="ph ph-trash text-xl"></i></button><div class="mb-6"><label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Nome</label><input v-model="fmt.nome" @change="atualizarFormato(fmt)" class="block w-full text-xl font-bold text-blue-600 dark:text-blue-400 border-b border-dashed border-gray-300 dark:border-gray-600 focus:border-blue-500 outline-none bg-transparent pb-1"></div><div class="space-y-4"><div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-100 dark:border-blue-800"><div class="flex items-center gap-2 mb-2"><i class="ph-fill ph-arrows-vertical text-blue-500"></i><span class="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase">Lateral</span></div><div class="flex items-center justify-between gap-2"><input type="number" step="0.01" v-model.number="fmt.latMin" @change="atualizarFormato(fmt)" class="input-clean text-center text-sm font-bold w-full"><span class="text-blue-300 font-bold">/</span><input type="number" step="0.01" v-model.number="fmt.latMax" @change="atualizarFormato(fmt)" class="input-clean text-center text-sm font-bold w-full"></div></div><div class="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl border border-emerald-100 dark:border-emerald-800"><div class="flex items-center gap-2 mb-2"><i class="ph-fill ph-arrows-in-cardinal text-emerald-500"></i><span class="text-xs font-bold text-emerald-700 dark:text-emerald-300 uppercase">Central</span></div><div class="flex items-center justify-between gap-2"><input type="number" step="0.01" v-model.number="fmt.centMin" @change="atualizarFormato(fmt)" class="input-clean text-center text-sm font-bold w-full"><span class="text-emerald-300 font-bold">/</span><input type="number" step="0.01" v-model.number="fmt.centMax" @change="atualizarFormato(fmt)" class="input-clean text-center text-sm font-bold w-full"></div></div></div></div></div>
+                </div>
+
+                <div v-if="adminTab === 'cadastros'">
+                    <h2 class="text-2xl font-bold mb-6 hidden md:block">Cadastros Básicos</h2>
+                    <div class="grid md:grid-cols-2 gap-8"><div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-800 flex flex-col h-[500px]"><div class="p-5 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-900 rounded-t-2xl"><h3 class="font-bold flex items-center gap-2"><i class="ph-fill ph-package text-blue-500"></i> Produtos</h3><button @click="novoItemSimples('produtos')" class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 font-bold">+ Adicionar</button></div><div class="p-4 border-b border-gray-100 dark:border-slate-800"><input v-model="filtroAdminProdutos" placeholder="Buscar..." class="input-clean pl-9 bg-[url('https://unpkg.com/@phosphor-icons/web/src/regular/magnifying-glass.svg')] bg-no-repeat bg-[10px_center]"></div><div class="overflow-y-auto flex-1 p-2"><div v-for="p in produtosAdminFiltrados" :key="p.id" class="group flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg transition-colors border-b border-gray-50 dark:border-slate-800 last:border-0"><input v-model="p.nome" @change="atualizarItemSimples('produtos', p)" class="bg-transparent outline-none w-full text-sm font-medium focus:text-blue-600 text-gray-700 dark:text-gray-300"><button @click="removerItem('produtos', p.id)" class="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-opacity p-2"><i class="ph-bold ph-trash"></i></button></div></div></div><div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-800 flex flex-col h-[500px]"><div class="p-5 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-900 rounded-t-2xl"><h3 class="font-bold flex items-center gap-2"><i class="ph-fill ph-factory text-emerald-500"></i> Linhas</h3><button @click="novoItemSimples('linhas')" class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-700 font-bold">+ Adicionar</button></div><div class="overflow-y-auto flex-1 p-2"><div v-for="l in cadastros.linhas" :key="l.id" class="group flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg transition-colors border-b border-gray-50 dark:border-slate-800 last:border-0"><input v-model="l.nome" @change="atualizarItemSimples('linhas', l)" class="bg-transparent outline-none w-full text-sm font-medium focus:text-emerald-600 text-gray-700 dark:text-gray-300"><button @click="removerItem('linhas', l.id)" class="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-opacity p-2"><i class="ph-bold ph-trash"></i></button></div></div></div></div>
+                </div>
             </main>
 
             <div v-if="relatorioSelecionado" class="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
@@ -174,12 +286,18 @@
         </div>
 
         <div v-else-if="currentView === 'inspector'" class="flex flex-col h-screen">
-            <header class="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 px-4 py-3 shadow-sm flex justify-between items-center z-20"><div class="flex items-center gap-2 font-bold text-gray-800 dark:text-white"><i class="ph-fill ph-check-square text-blue-600 text-xl"></i> <span class="hidden sm:inline">Empeno Pro</span></div><div class="flex items-center gap-3"><div class="text-xs text-right hidden sm:block"><div class="font-bold text-gray-800 dark:text-white">{{ loginData.user }}</div><div class="text-gray-400">Inspetor</div></div><button @click="logout" class="text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full"><i class="ph ph-sign-out text-xl"></i></button></div></header>
+            <header class="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 px-4 py-3 shadow-sm flex justify-between items-center z-20">
+                <div class="flex items-center gap-2 font-bold text-gray-800 dark:text-white"><i class="ph-fill ph-check-square text-blue-600 text-xl"></i> <span class="hidden sm:inline">Empeno Pro</span></div>
+                <div class="flex items-center gap-3"><div class="text-xs text-right hidden sm:block"><div class="font-bold text-gray-800 dark:text-white">{{ loginData.user }}</div><div class="text-gray-400">Inspetor</div></div><button @click="logout" class="text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full"><i class="ph ph-sign-out text-xl"></i></button></div>
+            </header>
             <div class="bg-white dark:bg-slate-900 border-b dark:border-slate-800 p-4 shadow-sm z-10 space-y-3">
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-3 items-center">
                     <select v-model="form.linha" @change="salvarRascunho" class="input-clean"><option value="">Linha...</option><option v-for="l in cadastros.linhas" :value="l.nome">{{ l.nome }}</option></select>
                     <select v-model="form.formatoId" @change="salvarRascunho" class="input-clean"><option value="">Formato...</option><option v-for="f in cadastros.formatos" :value="f.id">{{ f.nome }}</option></select>
-                    <div class="relative group"><input v-model="produtoSearch" @focus="mostrandoListaProdutos = true" @blur="setTimeout(() => mostrandoListaProdutos = false, 200)" placeholder="Buscar Produto..." class="input-clean w-full pl-8" :class="form.produto ? 'border-green-400 bg-green-50 dark:bg-green-900/20 dark:border-green-800 text-green-800 dark:text-green-400 font-bold' : ''"><i class="ph ph-magnifying-glass absolute left-2.5 top-3 text-gray-400"></i><div v-if="mostrandoListaProdutos" class="absolute top-full left-0 w-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xl rounded-lg mt-1 max-h-60 overflow-y-auto z-50"><div v-for="p in produtosFiltrados" @click="selecionarProduto(p.nome)" class="p-2.5 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer border-b border-gray-50 dark:border-slate-800 text-gray-700 dark:text-gray-300">{{ p.nome }}</div></div></div>
+                    <div class="relative group">
+                        <input v-model="produtoSearch" @focus="mostrandoListaProdutos = true" @blur="setTimeout(() => mostrandoListaProdutos = false, 200)" placeholder="Buscar Produto..." class="input-clean w-full pl-8" :class="form.produto ? 'border-green-400 bg-green-50 dark:bg-green-900/20 dark:border-green-800 text-green-800 dark:text-green-400 font-bold' : ''"><i class="ph ph-magnifying-glass absolute left-2.5 top-3 text-gray-400"></i>
+                        <div v-if="mostrandoListaProdutos" class="absolute top-full left-0 w-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xl rounded-lg mt-1 max-h-60 overflow-y-auto z-50"><div v-for="p in produtosFiltrados" @click="selecionarProduto(p.nome)" class="p-2.5 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer border-b border-gray-50 dark:border-slate-800 text-gray-700 dark:text-gray-300">{{ p.nome }}</div></div>
+                    </div>
                     <input v-model="form.lote" @input="form.lote = form.lote.toUpperCase()" class="input-clean uppercase font-bold" placeholder="LOTE">
                     <select v-model="form.posFolga" @change="salvarRascunho" class="input-clean border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 font-medium text-blue-800 dark:text-blue-300"><option value="">Pós Folga? *</option><option value="Sim">Sim</option><option value="Não">Não</option></select>
                 </div>
@@ -197,7 +315,9 @@
                     <button @click="adicionarPeca" class="w-full py-4 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl text-gray-400 hover:border-blue-500 hover:text-blue-500 transition font-medium bg-white dark:bg-slate-900"><i class="ph ph-plus-circle text-xl align-middle"></i> Nova Peça</button>
                 </div>
             </main>
-            <div class="fixed bottom-2 left-0 right-0 flex justify-center z-50 pointer-events-none"><button @click="gerarRelatorioFinal" class="pointer-events-auto bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 py-3 shadow-2xl flex items-center gap-3 transition-transform hover:scale-105 active:scale-95 border-2 border-white/20 backdrop-blur-sm"><i class="ph-fill ph-check-circle text-2xl"></i> <span class="font-bold text-lg">Concluir</span></button></div>
+            <div class="fixed bottom-2 left-0 right-0 flex justify-center z-50 pointer-events-none">
+                <button @click="gerarRelatorioFinal" class="pointer-events-auto bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 py-3 shadow-2xl flex items-center gap-3 transition-transform hover:scale-105 active:scale-95 border-2 border-white/20 backdrop-blur-sm"><i class="ph-fill ph-check-circle text-2xl"></i> <span class="font-bold text-lg">Concluir</span></button>
+            </div>
         </div>
 
         <div v-if="reportText" class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
