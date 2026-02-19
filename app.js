@@ -41,7 +41,7 @@ createApp({
 
         const navigateAdmin = (tab) => { adminTab.value = tab; mobileMenuOpen.value = false; };
 
-        // --- FUNÇÃO GERAR IMAGEM (CORRIGIDA: INPUTS -> TEXTO) ---
+        // --- FUNÇÃO GERAR IMAGEM (CORRIGIDA: INPUTS VISUAIS) ---
         const baixarPrintRelatorio = async () => {
             const btn = document.getElementById('btn-print-action');
             if(btn) btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Gerando...';
@@ -50,6 +50,7 @@ createApp({
                 const original = document.getElementById('modal-relatorio-content');
                 const clone = original.cloneNode(true);
                 
+                // Configura Clone Full Height
                 clone.style.position = 'fixed';
                 clone.style.top = '-10000px';
                 clone.style.left = '0';
@@ -58,29 +59,26 @@ createApp({
                 clone.style.zIndex = '-1000';
                 clone.style.overflow = 'visible';
                 clone.style.backgroundColor = isDarkMode.value ? '#0f172a' : '#ffffff';
-                clone.classList.remove('h-full', 'max-h-[90vh]');
+                clone.classList.remove('h-full', 'max-h-[90vh]'); // Tira limite de altura
 
-                // Remove scroll do clone
+                // Ajusta container interno
                 const scrollableDiv = clone.querySelector('.overflow-y-auto');
                 if (scrollableDiv) {
-                    scrollableDiv.classList.remove('overflow-y-auto', 'flex-1', 'h-full');
+                    scrollableDiv.classList.remove('overflow-y-auto', 'flex-1', 'modal-scroll');
                     scrollableDiv.style.height = 'auto';
                     scrollableDiv.style.overflow = 'visible';
                 }
 
-                // SUBSTIUI INPUTS POR TEXTO (Fix para valores sumindo)
-                const inputs = clone.querySelectorAll('input');
-                inputs.forEach(input => {
-                    const span = document.createElement('div');
-                    span.innerText = input.value;
-                    span.style.textAlign = 'center';
-                    span.style.fontWeight = 'bold';
-                    span.style.fontSize = '14px';
-                    span.style.color = isDarkMode.value ? '#e2e8f0' : '#1e293b';
-                    if (input.classList.contains('border-red-500')) {
-                        span.style.color = '#ef4444'; // Vermelho se erro
+                // CORREÇÃO CRÍTICA: COPIA VALORES PARA OS INPUTS CLONADOS
+                // Html2canvas não pega o valor dinâmico do clone, precisamos forçar
+                const originalInputs = original.querySelectorAll('input');
+                const clonedInputs = clone.querySelectorAll('input');
+                
+                originalInputs.forEach((input, index) => {
+                    if (clonedInputs[index]) {
+                        clonedInputs[index].setAttribute('value', input.value); // Força atributo
+                        clonedInputs[index].value = input.value; // Força propriedade
                     }
-                    if(input.parentNode) input.parentNode.replaceChild(span, input);
                 });
 
                 document.body.appendChild(clone);
