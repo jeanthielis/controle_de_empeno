@@ -16,8 +16,13 @@ createApp({
         const isDarkMode = ref(false);
         const toggleDarkMode = () => {
             isDarkMode.value = !isDarkMode.value;
-            if (isDarkMode.value) { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark'); } 
-            else { document.documentElement.classList.remove('dark'); localStorage.setItem('theme', 'light'); }
+            if (isDarkMode.value) {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            }
         };
 
         const currentView = ref('login'); 
@@ -41,30 +46,26 @@ createApp({
 
         const navigateAdmin = (tab) => { adminTab.value = tab; mobileMenuOpen.value = false; };
 
-        // --- FUNÇÃO GERAR IMAGEM (CORRIGIDA: EXPANSÃO TOTAL) ---
+        // --- FUNÇÃO GERAR IMAGEM (CORRIGIDA) ---
         const baixarPrintRelatorio = async () => {
             const btn = document.getElementById('btn-print-action');
             if(btn) btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Gerando...';
 
             try {
-                // 1. Seleciona o elemento original
                 const original = document.getElementById('modal-relatorio-content');
                 
-                // 2. Cria um CLONE para não estragar a tela do usuário
+                // Clone para renderizar tudo (scroll infinito)
                 const clone = original.cloneNode(true);
-                
-                // 3. Configura o CLONE para ser invisível mas renderizável e FULL HEIGHT
                 clone.style.position = 'fixed';
-                clone.style.top = '-10000px'; // Joga pra fora da tela
+                clone.style.top = '-10000px';
                 clone.style.left = '0';
-                clone.style.width = '800px'; // Largura fixa ideal para leitura
-                clone.style.height = 'auto'; // Altura automática (estica tudo)
+                clone.style.width = '800px';
+                clone.style.height = 'auto';
                 clone.style.zIndex = '-1000';
-                clone.style.overflow = 'visible'; // Remove scrollbars
+                clone.style.overflow = 'visible';
                 clone.style.backgroundColor = isDarkMode.value ? '#0f172a' : '#ffffff';
-                clone.classList.remove('h-full', 'max-h-[90vh]'); // Remove limites de altura do Tailwind
+                clone.classList.remove('h-full', 'max-h-[90vh]');
 
-                // 4. Acha a div interna que tem scroll e remove o scroll dela também
                 const scrollableDiv = clone.querySelector('.overflow-y-auto');
                 if (scrollableDiv) {
                     scrollableDiv.classList.remove('overflow-y-auto', 'flex-1', 'h-full');
@@ -72,26 +73,40 @@ createApp({
                     scrollableDiv.style.overflow = 'visible';
                 }
 
-                // 5. Adiciona ao corpo temporariamente
                 document.body.appendChild(clone);
 
-                // 6. Gera a imagem do CLONE expandido
                 const canvas = await html2canvas(clone, {
                     backgroundColor: isDarkMode.value ? '#0f172a' : '#ffffff',
-                    scale: 2, // Alta qualidade
+                    scale: 2,
                     windowWidth: 800
                 });
                 
-                // 7. Remove o clone
                 document.body.removeChild(clone);
 
-                // 8. Baixa a imagem
+                // --- CORREÇÃO DA DATA PARA NOME DE ARQUIVO ---
+                let dataSegura;
+                const rawData = relatorioSelecionado.value.dataHora;
+
+                if (rawData && rawData.seconds) {
+                    // É Timestamp do Firebase
+                    dataSegura = new Date(rawData.seconds * 1000);
+                } else {
+                    // É Date ou String ou Hoje
+                    dataSegura = rawData ? new Date(rawData) : new Date();
+                }
+
+                // Formata DD-MM-AAAA_HH-MM (Sem barras que quebram o download)
+                const nomeArquivoData = dataSegura.toLocaleString('pt-BR')
+                    .replace(/\//g, '-')   // Troca / por -
+                    .replace(/:/g, '-')    // Troca : por -
+                    .replace(', ', '_');   // Troca espaço por _
+
                 const link = document.createElement('a');
-                link.download = `Relatorio_${formatarDataInput(relatorioSelecionado.value.dataHora || new Date().toISOString())}.png`;
+                link.download = `Relatorio_${nomeArquivoData}.png`;
                 link.href = canvas.toDataURL("image/png");
                 link.click();
                 
-                notify('Sucesso', 'Imagem salva com todas as peças.', 'sucesso');
+                notify('Sucesso', 'Imagem salva.', 'sucesso');
             } catch (e) {
                 console.error(e);
                 notify('Erro', 'Falha ao gerar imagem.', 'erro');
@@ -117,10 +132,21 @@ createApp({
                 const matchProduto = filtros.value.produto ? item.produto?.toLowerCase().includes(filtros.value.produto.toLowerCase()) : true;
                 const matchLote = filtros.value.lote ? item.lote?.toLowerCase().includes(filtros.value.lote.toLowerCase()) : true;
                 const matchPosFolga = filtros.value.posFolga ? item.posFolga === filtros.value.posFolga : true;
+                
                 const itemDateStr = formatarData(item.dataHora);
                 let matchData = false;
-                if (filtros.value.data) { matchData = itemDateStr === formatarDataInput(filtros.value.data); } 
-                else { const hoje = new Date().toLocaleDateString('pt-BR'); const ontem = new Date(); ontem.setDate(ontem.getDate() - 1); const ontemStr = ontem.toLocaleDateString('pt-BR'); matchData = (itemDateStr === hoje || itemDateStr === ontemStr); }
+
+                if (filtros.value.data) {
+                    matchData = itemDateStr === formatarDataInput(filtros.value.data);
+                } else {
+                    const hoje = new Date();
+                    const ontem = new Date();
+                    ontem.setDate(ontem.getDate() - 1);
+                    const hojeStr = hoje.toLocaleDateString('pt-BR');
+                    const ontemStr = ontem.toLocaleDateString('pt-BR');
+                    matchData = (itemDateStr === hojeStr || itemDateStr === ontemStr);
+                }
+
                 return matchProduto && matchLote && matchPosFolga && matchData;
             }).sort((a,b) => b.dataHora - a.dataHora);
         });
@@ -155,7 +181,8 @@ createApp({
         const gerarRelatorioFinal = async () => {
             if (!form.value.linha || !form.value.produto || !form.value.formatoId) { notify('Erro', 'Cabeçalho incompleto.', 'erro'); return; }
             if (!form.value.posFolga) { notify('Atenção', 'Preencha se é Pós Folga.', 'erro'); return; }
-            await salvarRascunho(); if(currentInspectionId.value) await updateDoc(doc(db, "inspecoes", currentInspectionId.value), { status: 'finalizado' });
+            await salvarRascunho(); 
+            if(currentInspectionId.value) await updateDoc(doc(db, "inspecoes", currentInspectionId.value), { status: 'finalizado' });
             const now = new Date(); const dataStr = now.toLocaleDateString('pt-BR'); const conf = configAtiva.value;
             let txt = `*RELATÓRIO DE EMPENO*\n*Data:* ${dataStr} ${now.toLocaleTimeString().slice(0,5)}\n*Responsável:* ${loginData.value.user}\n`;
             if (form.value.posFolga === 'Sim') txt += `*Pós Folga:* Sim\n`;
@@ -171,7 +198,17 @@ createApp({
         const adicionarPeca = () => { form.value.pecas.push({ laterais: {A:null,B:null,C:null,D:null}, lateraisDisplay: {A:'',B:'',C:'',D:''}, centrais: {1:null,2:null}, centraisDisplay: {1:'',2:''} }); salvarRascunho(); };
         const removerPeca = (idx) => { if (form.value.pecas.length > 0) { form.value.pecas.splice(idx, 1); salvarRascunho(); } };
         const formatarData = (ts) => ts && ts.seconds ? new Date(ts.seconds * 1000).toLocaleDateString('pt-BR') : '-';
-        const formatarDataInput = (d) => d ? d.split('-').reverse().join('/') : '';
+        
+        // CORRIGIDO: Agora aceita string para filtro
+        const formatarDataInput = (d) => {
+            if(!d) return '';
+            // Se vier do input type=date (yyyy-mm-dd)
+            if (typeof d === 'string' && d.includes('-')) {
+                return d.split('-').reverse().join('/');
+            }
+            return '';
+        };
+
         const abrirDetalhesRelatorio = (r) => relatorioSelecionado.value = r;
         const limparFiltros = () => filtros.value = { data: '', produto: '', lote: '', posFolga: '' };
         const logout = () => { currentView.value = 'login'; loginData.value = { user: '', pass: '', remember: false }; localStorage.removeItem('qc_user'); localStorage.removeItem('qc_pass'); };
