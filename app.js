@@ -39,18 +39,12 @@ createApp({
         const form = ref({ linha: '', formatoId: '', produto: '', lote: '', posFolga: '', pecas: [] });
         const reportText = ref('');
 
-        // --- CHART JS VARS ---
-        const filtrosGrafico = ref({ formato: '', data: new Date().toISOString().slice(0, 7) }); // YYYY-MM
-        let chartInstance = null;
-
         const navigateAdmin = (tab) => { adminTab.value = tab; mobileMenuOpen.value = false; };
 
-        // --- ATUALIZAÇÃO DO GRÁFICO ---
         const updateChart = () => {
             const ctx = document.getElementById('qualityChart');
-            if (!ctx) return; // Se não estiver na tela, sai
+            if (!ctx) return; 
 
-            // 1. Filtra Dados
             const [ano, mes] = filtrosGrafico.value.data.split('-');
             const formatoId = filtrosGrafico.value.formato;
 
@@ -61,7 +55,6 @@ createApp({
                 return matchData && matchFormato;
             });
 
-            // 2. Agrupa por Dia (1..31)
             const diasNoMes = new Date(ano, mes, 0).getDate();
             const labels = Array.from({length: diasNoMes}, (_, i) => i + 1);
             const aprovados = new Array(diasNoMes).fill(0);
@@ -69,12 +62,11 @@ createApp({
 
             dadosFiltrados.forEach(i => {
                 const data = i.dataHora && i.dataHora.seconds ? new Date(i.dataHora.seconds * 1000) : new Date();
-                const dia = data.getDate() - 1; // Index 0-based
+                const dia = data.getDate() - 1; 
                 if (i.resultado === 'Aprovado') aprovados[dia]++;
                 else reprovados[dia]++;
             });
 
-            // 3. Renderiza/Atualiza Chart
             if (chartInstance) chartInstance.destroy();
 
             chartInstance = new Chart(ctx, {
@@ -98,7 +90,9 @@ createApp({
             });
         };
 
-        // --- FUNÇÃO GERAR IMAGEM ---
+        const filtrosGrafico = ref({ formato: '', data: new Date().toISOString().slice(0, 7) }); 
+        let chartInstance = null;
+
         const baixarPrintRelatorio = async () => {
             const btn = document.getElementById('btn-print-action');
             if(btn) btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Gerando...';
@@ -107,14 +101,18 @@ createApp({
                 const original = document.getElementById('modal-relatorio-content');
                 const clone = original.cloneNode(true);
                 
-                clone.style.position = 'fixed';
-                clone.style.top = '-10000px';
+                clone.style.position = 'absolute';
+                clone.style.top = '-9999px';
                 clone.style.left = '0';
                 clone.style.width = '800px'; 
                 clone.style.height = 'auto'; 
                 clone.style.zIndex = '-1000';
                 clone.style.overflow = 'visible';
-                clone.style.backgroundColor = isDarkMode.value ? '#0f172a' : '#ffffff';
+                
+                const isDark = isDarkMode.value;
+                clone.style.backgroundColor = isDark ? '#0f172a' : '#ffffff';
+                clone.style.color = isDark ? '#f1f5f9' : '#1e293b';
+                
                 clone.classList.remove('h-full', 'max-h-[90vh]'); 
 
                 const scrollableDiv = clone.querySelector('.overflow-y-auto');
@@ -124,27 +122,28 @@ createApp({
                     scrollableDiv.style.overflow = 'visible';
                 }
 
-                // SUBSTITUI INPUTS POR TEXTO VISUAL (IMPORTANTE!)
                 const originalInputs = original.querySelectorAll('input');
                 const clonedInputs = clone.querySelectorAll('input');
-                
+
                 originalInputs.forEach((origInput, index) => {
                     const cloneInput = clonedInputs[index];
                     if (cloneInput) {
                         const valor = origInput.value;
                         const textDiv = document.createElement('div');
                         textDiv.innerText = valor;
-                        textDiv.className = cloneInput.className;
+                        textDiv.className = cloneInput.className; 
                         textDiv.style.display = 'flex';
                         textDiv.style.alignItems = 'center';
                         textDiv.style.justifyContent = 'center';
-                        textDiv.style.background = isDarkMode.value ? '#1e293b' : '#ffffff';
-                        textDiv.style.border = isDarkMode.value ? '1px solid #334155' : '1px solid #e2e8f0';
+                        textDiv.style.background = isDark ? '#1e293b' : '#ffffff'; 
+                        textDiv.style.border = isDark ? '1px solid #334155' : '1px solid #e2e8f0'; 
+                        
                         if(origInput.classList.contains('border-red-500')) {
                             textDiv.style.borderColor = '#ef4444';
-                            textDiv.style.backgroundColor = isDarkMode.value ? '#450a0a' : '#fef2f2';
+                            textDiv.style.backgroundColor = isDark ? '#450a0a' : '#fef2f2';
                             textDiv.style.color = '#ef4444';
                         }
+
                         cloneInput.parentNode.replaceChild(textDiv, cloneInput);
                     }
                 });
@@ -152,8 +151,8 @@ createApp({
                 document.body.appendChild(clone);
 
                 const canvas = await html2canvas(clone, {
-                    backgroundColor: isDarkMode.value ? '#0f172a' : '#ffffff',
-                    scale: 2,
+                    backgroundColor: isDark ? '#0f172a' : '#ffffff',
+                    scale: 2, 
                     windowWidth: 800
                 });
                 
@@ -170,7 +169,8 @@ createApp({
                 link.href = canvas.toDataURL("image/png");
                 link.click();
                 
-                notify('Sucesso', 'Imagem salva.', 'sucesso');
+                notify('Sucesso', 'Imagem salva com valores.', 'sucesso');
+
             } catch (e) {
                 console.error(e);
                 notify('Erro', 'Falha ao gerar imagem.', 'erro');
@@ -179,7 +179,6 @@ createApp({
             }
         };
 
-        // --- DASHBOARD ESTATÍSTICAS ---
         const stats = computed(() => {
             const lista = cadastros.value.inspecoes;
             const hoje = new Date().toLocaleDateString('pt-BR');
@@ -255,10 +254,44 @@ createApp({
         const limparFiltros = () => filtros.value = { data: '', produto: '', lote: '', posFolga: '' };
         const logout = () => { currentView.value = 'login'; loginData.value = { user: '', pass: '', remember: false }; localStorage.removeItem('qc_user'); localStorage.removeItem('qc_pass'); };
         const novaInspecaoLimpa = () => { reportText.value = ''; currentInspectionId.value = null; form.value.pecas = []; form.value.lote = ''; form.value.posFolga = ''; form.value.produto = ''; produtoSearch.value = ''; adicionarPeca(); };
-        const novoFormato = async () => { const n = prompt("Nome:"); if(n) addDoc(collection(db,"formatos"), {nome:n, latMin:-0.5, latMax:0.5, centMin:-1, centMax:1}); };
+        
+        // --- BLOQUEIO DE DUPLICIDADE NO CADASTRO ---
+        const novoFormato = async () => { const n = prompt("Nome do Formato:"); if(n) addDoc(collection(db,"formatos"), {nome:n, latMin:-0.5, latMax:0.5, centMin:-1, centMax:1}); };
+        
+        const novoItemSimples = async (collectionName) => { 
+            const n = prompt("Nome:"); 
+            if(!n) return; 
+            const nomeTrimmed = n.trim();
+            // Verifica duplicidade
+            const existe = cadastros.value[collectionName].some(item => item.nome.toLowerCase() === nomeTrimmed.toLowerCase());
+            if (existe) {
+                notify('Atenção', 'Este item já está cadastrado.', 'erro');
+                return;
+            }
+            try {
+                await addDoc(collection(db, collectionName), {nome: nomeTrimmed}); 
+                notify('Sucesso', 'Cadastrado com sucesso.', 'sucesso');
+            } catch(e) {
+                notify('Erro', 'Falha ao cadastrar.', 'erro');
+            }
+        };
+
+        const atualizarItemSimples = async (collectionName, item) => { 
+            const nomeTrimmed = item.nome.trim();
+            // Verifica duplicidade na edição (ignora o próprio ID)
+            const existe = cadastros.value[collectionName].some(i => i.nome.toLowerCase() === nomeTrimmed.toLowerCase() && i.id !== item.id);
+            if (existe) {
+                notify('Atenção', 'Já existe um item com este nome.', 'erro');
+                return; // Impede atualização
+            }
+            try {
+                await updateDoc(doc(db, collectionName, item.id), {nome: nomeTrimmed}); 
+            } catch(e) {
+                notify('Erro', 'Falha ao atualizar.', 'erro');
+            }
+        };
+
         const atualizarFormato = async (f) => { const {id,...d}=f; await updateDoc(doc(db,"formatos",id),d); };
-        const novoItemSimples = async (c) => { const n = prompt("Nome:"); if(n) addDoc(collection(db,c), {nome:n}); };
-        const atualizarItemSimples = async (c, i) => await updateDoc(doc(db,c,i.id), {nome:i.nome});
         const removerItem = async (c, id) => { if(confirm("Excluir?")) deleteDoc(doc(db,c,id)); };
         const copiarTexto = () => navigator.clipboard.writeText(reportText.value);
         const enviarZap = () => window.open(`https://wa.me/?text=${encodeURIComponent(reportText.value)}`, '_blank');
@@ -273,12 +306,10 @@ createApp({
             onSnapshot(collection(db, "usuarios"), s => cadastros.value.usuarios = s.docs.map(d=>({id:d.id,...d.data()})));
             onSnapshot(query(collection(db, "inspecoes"), orderBy("dataHora", "desc")), s => {
                 cadastros.value.inspecoes = s.docs.map(d=>({id:d.id,...d.data()}));
-                // Atualiza gráfico sempre que dados mudam
                 nextTick(() => { if (adminTab.value === 'dashboard') updateChart(); });
             });
         });
 
-        // Watchers para atualizar gráfico
         watch([filtrosGrafico.value, adminTab], () => { if (adminTab.value === 'dashboard') nextTick(updateChart); });
 
         return {
