@@ -41,30 +41,60 @@ createApp({
 
         const navigateAdmin = (tab) => { adminTab.value = tab; mobileMenuOpen.value = false; };
 
-        // --- FUNÇÃO GERAR IMAGEM (PRINT) ---
+        // --- FUNÇÃO GERAR IMAGEM (CORRIGIDA: EXPANSÃO TOTAL) ---
         const baixarPrintRelatorio = async () => {
-            const element = document.getElementById('modal-relatorio-content');
-            if (!element) return;
-            
             const btn = document.getElementById('btn-print-action');
-            if(btn) btn.innerText = 'Gerando...';
+            if(btn) btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Gerando...';
 
             try {
-                // Configurações para garantir que fique bonito em Dark Mode também
-                const canvas = await html2canvas(element, {
-                    backgroundColor: isDarkMode.value ? '#0f172a' : '#ffffff', 
-                    scale: 2, // Aumenta qualidade
-                    useCORS: true // Ajuda se tiver imagens externas (não é o caso, mas previne)
+                // 1. Seleciona o elemento original
+                const original = document.getElementById('modal-relatorio-content');
+                
+                // 2. Cria um CLONE para não estragar a tela do usuário
+                const clone = original.cloneNode(true);
+                
+                // 3. Configura o CLONE para ser invisível mas renderizável e FULL HEIGHT
+                clone.style.position = 'fixed';
+                clone.style.top = '-10000px'; // Joga pra fora da tela
+                clone.style.left = '0';
+                clone.style.width = '800px'; // Largura fixa ideal para leitura
+                clone.style.height = 'auto'; // Altura automática (estica tudo)
+                clone.style.zIndex = '-1000';
+                clone.style.overflow = 'visible'; // Remove scrollbars
+                clone.style.backgroundColor = isDarkMode.value ? '#0f172a' : '#ffffff';
+                clone.classList.remove('h-full', 'max-h-[90vh]'); // Remove limites de altura do Tailwind
+
+                // 4. Acha a div interna que tem scroll e remove o scroll dela também
+                const scrollableDiv = clone.querySelector('.overflow-y-auto');
+                if (scrollableDiv) {
+                    scrollableDiv.classList.remove('overflow-y-auto', 'flex-1', 'h-full');
+                    scrollableDiv.style.height = 'auto';
+                    scrollableDiv.style.overflow = 'visible';
+                }
+
+                // 5. Adiciona ao corpo temporariamente
+                document.body.appendChild(clone);
+
+                // 6. Gera a imagem do CLONE expandido
+                const canvas = await html2canvas(clone, {
+                    backgroundColor: isDarkMode.value ? '#0f172a' : '#ffffff',
+                    scale: 2, // Alta qualidade
+                    windowWidth: 800
                 });
                 
+                // 7. Remove o clone
+                document.body.removeChild(clone);
+
+                // 8. Baixa a imagem
                 const link = document.createElement('a');
                 link.download = `Relatorio_${formatarDataInput(relatorioSelecionado.value.dataHora || new Date().toISOString())}.png`;
                 link.href = canvas.toDataURL("image/png");
                 link.click();
-                notify('Sucesso', 'Imagem salva no dispositivo.', 'sucesso');
+                
+                notify('Sucesso', 'Imagem salva com todas as peças.', 'sucesso');
             } catch (e) {
                 console.error(e);
-                notify('Erro', 'Não foi possível gerar a imagem.', 'erro');
+                notify('Erro', 'Falha ao gerar imagem.', 'erro');
             } finally {
                 if(btn) btn.innerHTML = '<i class="ph-bold ph-image"></i> Baixar Imagem';
             }
@@ -125,8 +155,7 @@ createApp({
         const gerarRelatorioFinal = async () => {
             if (!form.value.linha || !form.value.produto || !form.value.formatoId) { notify('Erro', 'Cabeçalho incompleto.', 'erro'); return; }
             if (!form.value.posFolga) { notify('Atenção', 'Preencha se é Pós Folga.', 'erro'); return; }
-            await salvarRascunho(); 
-            if(currentInspectionId.value) await updateDoc(doc(db, "inspecoes", currentInspectionId.value), { status: 'finalizado' });
+            await salvarRascunho(); if(currentInspectionId.value) await updateDoc(doc(db, "inspecoes", currentInspectionId.value), { status: 'finalizado' });
             const now = new Date(); const dataStr = now.toLocaleDateString('pt-BR'); const conf = configAtiva.value;
             let txt = `*RELATÓRIO DE EMPENO*\n*Data:* ${dataStr} ${now.toLocaleTimeString().slice(0,5)}\n*Responsável:* ${loginData.value.user}\n`;
             if (form.value.posFolga === 'Sim') txt += `*Pós Folga:* Sim\n`;
