@@ -16,8 +16,13 @@ createApp({
         const isDarkMode = ref(false);
         const toggleDarkMode = () => {
             isDarkMode.value = !isDarkMode.value;
-            if (isDarkMode.value) { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark'); } 
-            else { document.documentElement.classList.remove('dark'); localStorage.setItem('theme', 'light'); }
+            if (isDarkMode.value) {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            }
         };
 
         const currentView = ref('login'); 
@@ -41,27 +46,35 @@ createApp({
 
         const navigateAdmin = (tab) => { adminTab.value = tab; mobileMenuOpen.value = false; };
 
-        // --- FUNÇÃO GERAR IMAGEM (CORRIGIDA: INPUTS VISUAIS) ---
+        // --- FUNÇÃO GERAR IMAGEM (ESTRATÉGIA: INPUT -> TEXTO FIXO) ---
         const baixarPrintRelatorio = async () => {
             const btn = document.getElementById('btn-print-action');
             if(btn) btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Gerando...';
 
             try {
                 const original = document.getElementById('modal-relatorio-content');
+                
+                // 1. Clona o elemento
                 const clone = original.cloneNode(true);
                 
-                // Configura Clone Full Height
-                clone.style.position = 'fixed';
-                clone.style.top = '-10000px';
+                // 2. Configura clone expandido (sem scroll) e invisível na tela
+                clone.style.position = 'absolute';
+                clone.style.top = '-9999px';
                 clone.style.left = '0';
-                clone.style.width = '800px'; 
-                clone.style.height = 'auto'; 
+                clone.style.width = '800px'; // Largura fixa boa para leitura
+                clone.style.height = 'auto'; // Altura automática
                 clone.style.zIndex = '-1000';
                 clone.style.overflow = 'visible';
-                clone.style.backgroundColor = isDarkMode.value ? '#0f172a' : '#ffffff';
-                clone.classList.remove('h-full', 'max-h-[90vh]'); // Tira limite de altura
+                
+                // Força cores claras para o print ficar legível (estilo papel)
+                // Se preferir dark mode no print, mude para as cores do tema dark
+                const isDark = isDarkMode.value;
+                clone.style.backgroundColor = isDark ? '#0f172a' : '#ffffff';
+                clone.style.color = isDark ? '#f1f5f9' : '#1e293b';
+                
+                clone.classList.remove('h-full', 'max-h-[90vh]'); 
 
-                // Ajusta container interno
+                // Remove classes de scroll do container interno do clone
                 const scrollableDiv = clone.querySelector('.overflow-y-auto');
                 if (scrollableDiv) {
                     scrollableDiv.classList.remove('overflow-y-auto', 'flex-1', 'modal-scroll');
@@ -69,40 +82,71 @@ createApp({
                     scrollableDiv.style.overflow = 'visible';
                 }
 
-                // CORREÇÃO CRÍTICA: COPIA VALORES PARA OS INPUTS CLONADOS
-                // Html2canvas não pega o valor dinâmico do clone, precisamos forçar
+                // 3. SUBSTITUIÇÃO MÁGICA: Troca todos os <input> por <div> com texto
+                // Isso resolve o problema do valor não aparecer
                 const originalInputs = original.querySelectorAll('input');
                 const clonedInputs = clone.querySelectorAll('input');
-                
-                originalInputs.forEach((input, index) => {
-                    if (clonedInputs[index]) {
-                        clonedInputs[index].setAttribute('value', input.value); // Força atributo
-                        clonedInputs[index].value = input.value; // Força propriedade
+
+                originalInputs.forEach((origInput, index) => {
+                    const cloneInput = clonedInputs[index];
+                    if (cloneInput) {
+                        const valor = origInput.value;
+                        
+                        // Cria um elemento visual idêntico ao input, mas que é texto puro
+                        const textDiv = document.createElement('div');
+                        textDiv.innerText = valor;
+                        
+                        // Copia estilos essenciais para parecer a caixinha
+                        textDiv.className = cloneInput.className; // Mantém classes do Tailwind
+                        textDiv.style.display = 'flex';
+                        textDiv.style.alignItems = 'center';
+                        textDiv.style.justifyContent = 'center';
+                        textDiv.style.background = isDark ? '#1e293b' : '#ffffff'; // Fundo da caixa
+                        textDiv.style.border = isDark ? '1px solid #334155' : '1px solid #e2e8f0'; // Borda
+                        
+                        // Mantém a cor vermelha se tiver erro
+                        if(origInput.classList.contains('border-red-500')) {
+                            textDiv.style.borderColor = '#ef4444';
+                            textDiv.style.backgroundColor = isDark ? '#450a0a' : '#fef2f2';
+                            textDiv.style.color = '#ef4444';
+                        }
+
+                        // Substitui o input pelo div de texto no clone
+                        cloneInput.parentNode.replaceChild(textDiv, cloneInput);
                     }
                 });
 
+                // 4. Adiciona ao DOM para renderizar
                 document.body.appendChild(clone);
 
+                // 5. Gera a imagem
                 const canvas = await html2canvas(clone, {
-                    backgroundColor: isDarkMode.value ? '#0f172a' : '#ffffff',
-                    scale: 2,
+                    backgroundColor: isDark ? '#0f172a' : '#ffffff',
+                    scale: 2, // Alta qualidade
                     windowWidth: 800
                 });
                 
+                // 6. Limpa a bagunça
                 document.body.removeChild(clone);
 
+                // 7. Download
                 let dataSegura;
                 const rawData = relatorioSelecionado.value.dataHora;
                 if (rawData && rawData.seconds) dataSegura = new Date(rawData.seconds * 1000);
                 else dataSegura = rawData ? new Date(rawData) : new Date();
 
-                const nomeArquivoData = dataSegura.toLocaleString('pt-BR').replace(/\//g, '-').replace(/:/g, '-').replace(', ', '_');
+                const nomeArquivoData = dataSegura.toLocaleString('pt-BR')
+                    .replace(/\//g, '-')
+                    .replace(/:/g, '-')
+                    .replace(', ', '_');
+
                 const link = document.createElement('a');
                 link.download = `Relatorio_${nomeArquivoData}.png`;
                 link.href = canvas.toDataURL("image/png");
                 link.click();
                 
-                notify('Sucesso', 'Imagem salva.', 'sucesso');
+                notify('Sucesso', 'Imagem salva com valores.', 'sucesso');
+
             } catch (e) {
                 console.error(e);
                 notify('Erro', 'Falha ao gerar imagem.', 'erro');
@@ -182,7 +226,14 @@ createApp({
         const adicionarPeca = () => { form.value.pecas.push({ laterais: {A:null,B:null,C:null,D:null}, lateraisDisplay: {A:'',B:'',C:'',D:''}, centrais: {1:null,2:null}, centraisDisplay: {1:'',2:''} }); salvarRascunho(); };
         const removerPeca = (idx) => { if (form.value.pecas.length > 0) { form.value.pecas.splice(idx, 1); salvarRascunho(); } };
         const formatarData = (ts) => ts && ts.seconds ? new Date(ts.seconds * 1000).toLocaleDateString('pt-BR') : '-';
-        const formatarDataInput = (d) => d ? d.split('-').reverse().join('/') : '';
+        
+        // CORRIGIDO: Aceita string ou timestamp
+        const formatarDataInput = (d) => {
+            if(!d) return '';
+            if (typeof d === 'string' && d.includes('-')) { return d.split('-').reverse().join('/'); }
+            return '';
+        };
+
         const abrirDetalhesRelatorio = (r) => relatorioSelecionado.value = r;
         const limparFiltros = () => filtros.value = { data: '', produto: '', lote: '', posFolga: '' };
         const logout = () => { currentView.value = 'login'; loginData.value = { user: '', pass: '', remember: false }; localStorage.removeItem('qc_user'); localStorage.removeItem('qc_pass'); };
