@@ -12,9 +12,7 @@
             theme: { extend: { colors: { slate: { 950: '#020617' } } } }
         }
     </script>
-    
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
     <script type="importmap">
@@ -34,6 +32,12 @@
         }
         .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
+        
+        /* Estilização da Scrollbar do Modal */
+        .modal-scroll::-webkit-scrollbar { width: 8px; }
+        .modal-scroll::-webkit-scrollbar-track { background: transparent; }
+        .modal-scroll::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
+        .dark .modal-scroll::-webkit-scrollbar-thumb { background-color: #475569; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 dark:bg-slate-950 dark:text-slate-100 font-sans antialiased overflow-hidden">
@@ -166,12 +170,8 @@
                                     <span v-else class="text-[10px] bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 px-2 py-1 rounded-full font-bold">FORA</span>
                                 </div>
                                 <div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400 mb-3">
-                                    <div class="flex items-center gap-2">
-                                        <i class="ph ph-user"></i> {{ rel.inspetor }}
-                                    </div>
-                                    <div class="flex items-center gap-2">
-                                        <i class="ph ph-calendar"></i> {{ formatarData(rel.dataHora) }}
-                                    </div>
+                                    <div class="flex items-center gap-2"><i class="ph ph-user"></i> {{ rel.inspetor }}</div>
+                                    <div class="flex items-center gap-2"><i class="ph ph-calendar"></i> {{ formatarData(rel.dataHora) }}</div>
                                 </div>
                                 <div v-if="rel.posFolga === 'Sim'" class="mb-3">
                                     <span class="text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-1.5 py-0.5 rounded font-bold uppercase">Pós Folga</span>
@@ -207,15 +207,10 @@
                                         </td>
                                         <td class="p-4 font-bold text-gray-700 dark:text-gray-300">{{ rel.inspetor }}</td>
                                         <td class="p-4 text-xs text-gray-500 dark:text-gray-400">{{ rel.produto }} <br> Lote: {{ rel.lote }}</td>
-                                        
                                         <td class="p-4 text-right">
                                             <div class="flex justify-end gap-3">
-                                                <button @click="abrirDetalhesRelatorio(rel)" class="text-blue-500 hover:text-blue-700 dark:text-blue-400 transition-transform hover:scale-110" title="Ver/Editar">
-                                                    <i class="ph ph-pencil-simple text-xl"></i>
-                                                </button>
-                                                <button @click="removerInspecao(rel.id)" class="text-red-400 hover:text-red-600 transition-transform hover:scale-110" title="Excluir">
-                                                    <i class="ph ph-trash text-xl"></i>
-                                                </button>
+                                                <button @click="abrirDetalhesRelatorio(rel)" class="text-blue-500 hover:text-blue-700 dark:text-blue-400 transition-transform hover:scale-110"><i class="ph ph-pencil-simple text-xl"></i></button>
+                                                <button @click="removerInspecao(rel.id)" class="text-red-400 hover:text-red-600 transition-transform hover:scale-110"><i class="ph ph-trash text-xl"></i></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -251,7 +246,7 @@
             </main>
 
             <div v-if="relatorioSelecionado" class="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-                <div class="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl relative">
+                <div class="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl relative">
                     <div id="modal-relatorio-content" class="flex flex-col h-full bg-white dark:bg-slate-900 p-1">
                         
                         <div class="p-4 border-b dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-900 rounded-t-2xl" data-html2canvas-ignore>
@@ -259,13 +254,15 @@
                             <button @click="relatorioSelecionado = null" class="text-gray-400 hover:text-gray-600"><i class="ph ph-x text-xl"></i></button>
                         </div>
 
-                        <div class="p-6 overflow-y-auto flex-1">
-                            <div class="grid grid-cols-2 gap-4 text-sm mb-6 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                        <div class="p-6 overflow-y-auto flex-1 modal-scroll">
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-6 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
                                 <div class="dark:text-gray-300"><b>Inspetor:</b> {{ relatorioSelecionado.inspetor }}</div>
                                 <div class="dark:text-gray-300"><b>Pós Folga:</b> {{ relatorioSelecionado.posFolga }}</div>
                                 <div class="dark:text-gray-300"><b>Produto:</b> {{ relatorioSelecionado.produto }}</div>
                                 <div class="dark:text-gray-300"><b>Lote:</b> {{ relatorioSelecionado.lote }}</div>
-                                <div class="col-span-2 dark:text-gray-300"><b>Resultado:</b> <span :class="relatorioSelecionado.resultado === 'Aprovado' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400 font-bold'">{{ relatorioSelecionado.resultado }}</span></div>
+                                <div class="col-span-2 md:col-span-4 mt-2 border-t pt-2 border-blue-200 dark:border-blue-800 dark:text-gray-300">
+                                    <b>Resultado:</b> <span :class="relatorioSelecionado.resultado === 'Aprovado' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400 font-bold'">{{ relatorioSelecionado.resultado }}</span>
+                                </div>
                             </div>
                             
                             <div class="flex justify-between items-center mb-2">
@@ -284,7 +281,7 @@
                                             <div class="grid grid-cols-4 gap-2 mt-1">
                                                 <div v-for="(v, k) in peca.laterais" class="relative">
                                                     <input type="number" step="0.01" v-model.number="peca.laterais[k]" :class="getStatusRelatorio(relatorioSelecionado, peca.laterais[k], 'lateral') ? 'border-gray-200 dark:border-slate-700' : 'border-red-500 bg-red-50 dark:bg-red-900/20'" class="input-clean text-center font-bold h-8 text-sm w-full">
-                                                    <span class="absolute -top-2 left-1 text-[8px] bg-white dark:bg-slate-900 px-1 text-gray-400">{{k}}</span>
+                                                    <span class="absolute -top-2 left-1 text-[8px] bg-white dark:bg-slate-900 px-1 text-gray-400 no-print">{{k}}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -293,7 +290,7 @@
                                             <div class="grid grid-cols-2 gap-2 mt-1">
                                                 <div v-for="(v, k) in peca.centrais" class="relative">
                                                     <input type="number" step="0.01" v-model.number="peca.centrais[k]" :class="getStatusRelatorio(relatorioSelecionado, peca.centrais[k], 'central') ? 'border-gray-200 dark:border-slate-700' : 'border-red-500 bg-red-50 dark:bg-red-900/20'" class="input-clean text-center font-bold h-8 text-sm w-full">
-                                                    <span class="absolute -top-2 left-1 text-[8px] bg-white dark:bg-slate-900 px-1 text-gray-400">C{{k}}</span>
+                                                    <span class="absolute -top-2 left-1 text-[8px] bg-white dark:bg-slate-900 px-1 text-gray-400 no-print">C{{k}}</span>
                                                 </div>
                                             </div>
                                         </div>
