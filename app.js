@@ -1,4 +1,4 @@
-import { createApp, ref, computed, onMounted } from 'vue';
+import { createApp, ref, computed, onMounted, watch, nextTick } from 'vue';
 import { db } from './firebase-config.js'; 
 import { 
     collection, addDoc, doc, deleteDoc, updateDoc, onSnapshot, query, orderBy 
@@ -16,13 +16,8 @@ createApp({
         const isDarkMode = ref(false);
         const toggleDarkMode = () => {
             isDarkMode.value = !isDarkMode.value;
-            if (isDarkMode.value) {
-                document.documentElement.classList.add('dark');
-                localStorage.setItem('theme', 'dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-                localStorage.setItem('theme', 'light');
-            }
+            if (isDarkMode.value) { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark'); } 
+            else { document.documentElement.classList.remove('dark'); localStorage.setItem('theme', 'light'); }
         };
 
         const currentView = ref('login'); 
@@ -44,37 +39,84 @@ createApp({
         const form = ref({ linha: '', formatoId: '', produto: '', lote: '', posFolga: '', pecas: [] });
         const reportText = ref('');
 
+        // --- CHART JS VARS ---
+        const filtrosGrafico = ref({ formato: '', data: new Date().toISOString().slice(0, 7) }); // YYYY-MM
+        let chartInstance = null;
+
         const navigateAdmin = (tab) => { adminTab.value = tab; mobileMenuOpen.value = false; };
 
-        // --- FUNÇÃO GERAR IMAGEM (ESTRATÉGIA: INPUT -> TEXTO FIXO) ---
+        // --- ATUALIZAÇÃO DO GRÁFICO ---
+        const updateChart = () => {
+            const ctx = document.getElementById('qualityChart');
+            if (!ctx) return; // Se não estiver na tela, sai
+
+            // 1. Filtra Dados
+            const [ano, mes] = filtrosGrafico.value.data.split('-');
+            const formatoId = filtrosGrafico.value.formato;
+
+            const dadosFiltrados = cadastros.value.inspecoes.filter(i => {
+                const data = i.dataHora && i.dataHora.seconds ? new Date(i.dataHora.seconds * 1000) : new Date();
+                const matchData = data.getFullYear() == ano && (data.getMonth() + 1) == mes;
+                const matchFormato = formatoId ? i.formatoId === formatoId : true;
+                return matchData && matchFormato;
+            });
+
+            // 2. Agrupa por Dia (1..31)
+            const diasNoMes = new Date(ano, mes, 0).getDate();
+            const labels = Array.from({length: diasNoMes}, (_, i) => i + 1);
+            const aprovados = new Array(diasNoMes).fill(0);
+            const reprovados = new Array(diasNoMes).fill(0);
+
+            dadosFiltrados.forEach(i => {
+                const data = i.dataHora && i.dataHora.seconds ? new Date(i.dataHora.seconds * 1000) : new Date();
+                const dia = data.getDate() - 1; // Index 0-based
+                if (i.resultado === 'Aprovado') aprovados[dia]++;
+                else reprovados[dia]++;
+            });
+
+            // 3. Renderiza/Atualiza Chart
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Aprovados', data: aprovados, backgroundColor: '#10b981', borderRadius: 4 },
+                        { label: 'Reprovados', data: reprovados, backgroundColor: '#ef4444', borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { stacked: true, grid: { display: false } },
+                        y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } }
+                    },
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        };
+
+        // --- FUNÇÃO GERAR IMAGEM ---
         const baixarPrintRelatorio = async () => {
             const btn = document.getElementById('btn-print-action');
             if(btn) btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Gerando...';
 
             try {
                 const original = document.getElementById('modal-relatorio-content');
-                
-                // 1. Clona o elemento
                 const clone = original.cloneNode(true);
                 
-                // 2. Configura clone expandido (sem scroll) e invisível na tela
-                clone.style.position = 'absolute';
-                clone.style.top = '-9999px';
+                clone.style.position = 'fixed';
+                clone.style.top = '-10000px';
                 clone.style.left = '0';
-                clone.style.width = '800px'; // Largura fixa boa para leitura
-                clone.style.height = 'auto'; // Altura automática
+                clone.style.width = '800px'; 
+                clone.style.height = 'auto'; 
                 clone.style.zIndex = '-1000';
                 clone.style.overflow = 'visible';
-                
-                // Força cores claras para o print ficar legível (estilo papel)
-                // Se preferir dark mode no print, mude para as cores do tema dark
-                const isDark = isDarkMode.value;
-                clone.style.backgroundColor = isDark ? '#0f172a' : '#ffffff';
-                clone.style.color = isDark ? '#f1f5f9' : '#1e293b';
-                
+                clone.style.backgroundColor = isDarkMode.value ? '#0f172a' : '#ffffff';
                 clone.classList.remove('h-full', 'max-h-[90vh]'); 
 
-                // Remove classes de scroll do container interno do clone
                 const scrollableDiv = clone.querySelector('.overflow-y-auto');
                 if (scrollableDiv) {
                     scrollableDiv.classList.remove('overflow-y-auto', 'flex-1', 'modal-scroll');
@@ -82,71 +124,53 @@ createApp({
                     scrollableDiv.style.overflow = 'visible';
                 }
 
-                // 3. SUBSTITUIÇÃO MÁGICA: Troca todos os <input> por <div> com texto
-                // Isso resolve o problema do valor não aparecer
+                // SUBSTITUI INPUTS POR TEXTO VISUAL (IMPORTANTE!)
                 const originalInputs = original.querySelectorAll('input');
                 const clonedInputs = clone.querySelectorAll('input');
-
+                
                 originalInputs.forEach((origInput, index) => {
                     const cloneInput = clonedInputs[index];
                     if (cloneInput) {
                         const valor = origInput.value;
-                        
-                        // Cria um elemento visual idêntico ao input, mas que é texto puro
                         const textDiv = document.createElement('div');
                         textDiv.innerText = valor;
-                        
-                        // Copia estilos essenciais para parecer a caixinha
-                        textDiv.className = cloneInput.className; // Mantém classes do Tailwind
+                        textDiv.className = cloneInput.className;
                         textDiv.style.display = 'flex';
                         textDiv.style.alignItems = 'center';
                         textDiv.style.justifyContent = 'center';
-                        textDiv.style.background = isDark ? '#1e293b' : '#ffffff'; // Fundo da caixa
-                        textDiv.style.border = isDark ? '1px solid #334155' : '1px solid #e2e8f0'; // Borda
-                        
-                        // Mantém a cor vermelha se tiver erro
+                        textDiv.style.background = isDarkMode.value ? '#1e293b' : '#ffffff';
+                        textDiv.style.border = isDarkMode.value ? '1px solid #334155' : '1px solid #e2e8f0';
                         if(origInput.classList.contains('border-red-500')) {
                             textDiv.style.borderColor = '#ef4444';
-                            textDiv.style.backgroundColor = isDark ? '#450a0a' : '#fef2f2';
+                            textDiv.style.backgroundColor = isDarkMode.value ? '#450a0a' : '#fef2f2';
                             textDiv.style.color = '#ef4444';
                         }
-
-                        // Substitui o input pelo div de texto no clone
                         cloneInput.parentNode.replaceChild(textDiv, cloneInput);
                     }
                 });
 
-                // 4. Adiciona ao DOM para renderizar
                 document.body.appendChild(clone);
 
-                // 5. Gera a imagem
                 const canvas = await html2canvas(clone, {
-                    backgroundColor: isDark ? '#0f172a' : '#ffffff',
-                    scale: 2, // Alta qualidade
+                    backgroundColor: isDarkMode.value ? '#0f172a' : '#ffffff',
+                    scale: 2,
                     windowWidth: 800
                 });
                 
-                // 6. Limpa a bagunça
                 document.body.removeChild(clone);
 
-                // 7. Download
                 let dataSegura;
                 const rawData = relatorioSelecionado.value.dataHora;
                 if (rawData && rawData.seconds) dataSegura = new Date(rawData.seconds * 1000);
                 else dataSegura = rawData ? new Date(rawData) : new Date();
 
-                const nomeArquivoData = dataSegura.toLocaleString('pt-BR')
-                    .replace(/\//g, '-')
-                    .replace(/:/g, '-')
-                    .replace(', ', '_');
-
+                const nomeArquivoData = dataSegura.toLocaleString('pt-BR').replace(/\//g, '-').replace(/:/g, '-').replace(', ', '_');
                 const link = document.createElement('a');
                 link.download = `Relatorio_${nomeArquivoData}.png`;
                 link.href = canvas.toDataURL("image/png");
                 link.click();
                 
-                notify('Sucesso', 'Imagem salva com valores.', 'sucesso');
-
+                notify('Sucesso', 'Imagem salva.', 'sucesso');
             } catch (e) {
                 console.error(e);
                 notify('Erro', 'Falha ao gerar imagem.', 'erro');
@@ -155,7 +179,7 @@ createApp({
             }
         };
 
-        // --- DASHBOARD ---
+        // --- DASHBOARD ESTATÍSTICAS ---
         const stats = computed(() => {
             const lista = cadastros.value.inspecoes;
             const hoje = new Date().toLocaleDateString('pt-BR');
@@ -226,14 +250,7 @@ createApp({
         const adicionarPeca = () => { form.value.pecas.push({ laterais: {A:null,B:null,C:null,D:null}, lateraisDisplay: {A:'',B:'',C:'',D:''}, centrais: {1:null,2:null}, centraisDisplay: {1:'',2:''} }); salvarRascunho(); };
         const removerPeca = (idx) => { if (form.value.pecas.length > 0) { form.value.pecas.splice(idx, 1); salvarRascunho(); } };
         const formatarData = (ts) => ts && ts.seconds ? new Date(ts.seconds * 1000).toLocaleDateString('pt-BR') : '-';
-        
-        // CORRIGIDO: Aceita string ou timestamp
-        const formatarDataInput = (d) => {
-            if(!d) return '';
-            if (typeof d === 'string' && d.includes('-')) { return d.split('-').reverse().join('/'); }
-            return '';
-        };
-
+        const formatarDataInput = (d) => { if(!d) return ''; if (typeof d === 'string' && d.includes('-')) { return d.split('-').reverse().join('/'); } return ''; };
         const abrirDetalhesRelatorio = (r) => relatorioSelecionado.value = r;
         const limparFiltros = () => filtros.value = { data: '', produto: '', lote: '', posFolga: '' };
         const logout = () => { currentView.value = 'login'; loginData.value = { user: '', pass: '', remember: false }; localStorage.removeItem('qc_user'); localStorage.removeItem('qc_pass'); };
@@ -254,8 +271,15 @@ createApp({
             onSnapshot(collection(db, "produtos"), s => cadastros.value.produtos = s.docs.map(d=>({id:d.id,...d.data()})));
             onSnapshot(collection(db, "linhas"), s => cadastros.value.linhas = s.docs.map(d=>({id:d.id,...d.data()})));
             onSnapshot(collection(db, "usuarios"), s => cadastros.value.usuarios = s.docs.map(d=>({id:d.id,...d.data()})));
-            onSnapshot(query(collection(db, "inspecoes"), orderBy("dataHora", "desc")), s => cadastros.value.inspecoes = s.docs.map(d=>({id:d.id,...d.data()})));
+            onSnapshot(query(collection(db, "inspecoes"), orderBy("dataHora", "desc")), s => {
+                cadastros.value.inspecoes = s.docs.map(d=>({id:d.id,...d.data()}));
+                // Atualiza gráfico sempre que dados mudam
+                nextTick(() => { if (adminTab.value === 'dashboard') updateChart(); });
+            });
         });
+
+        // Watchers para atualizar gráfico
+        watch([filtrosGrafico.value, adminTab], () => { if (adminTab.value === 'dashboard') nextTick(updateChart); });
 
         return {
             notificacoes, salvandoAuto, currentView, loginData, handleLogin, logout, loading,
@@ -265,7 +289,7 @@ createApp({
             novoFormato, novoItemSimples, removerItem, atualizarFormato, atualizarItemSimples,
             formatarData, copiarTexto, enviarZap, stats, novoUsuarioForm, cadastrarUsuario,
             produtoSearch, produtosFiltrados, selecionarProduto, mostrandoListaProdutos, filtroAdminProdutos, produtosAdminFiltrados,
-            isDarkMode, toggleDarkMode
+            isDarkMode, toggleDarkMode, filtrosGrafico
         };
     }
 }).mount('#app');
