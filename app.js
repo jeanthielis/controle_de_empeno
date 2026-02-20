@@ -29,7 +29,9 @@ createApp({
         const adminTab = ref('dashboard'); 
         const mobileMenuOpen = ref(false); 
         
-        // Filtros atualizados para incluir Range de Datas e Resultado
+        // Nova variável para controlar a tela inicial do inspetor
+        const showStartModal = ref(true);
+        
         const filtros = ref({ 
             dataInicio: '', 
             dataFim: '', 
@@ -50,6 +52,16 @@ createApp({
         const reportText = ref('');
 
         const navigateAdmin = (tab) => { adminTab.value = tab; mobileMenuOpen.value = false; };
+
+        // Função para validar e iniciar a análise
+        const iniciarAnalise = () => {
+            if (!form.value.linha || !form.value.formatoId || !form.value.produto || !form.value.lote || !form.value.posFolga) {
+                notify('Atenção', 'Preencha todos os campos do cabeçalho para iniciar a análise.', 'erro');
+                return;
+            }
+            showStartModal.value = false;
+            salvarRascunho();
+        };
 
         const updateChart = () => {
             const ctx = document.getElementById('qualityChart');
@@ -214,7 +226,6 @@ createApp({
                     const fim = new Date(filtros.value.dataFim + 'T23:59:59');
                     matchData = (dataItem >= inicio && dataItem <= fim);
                 } else {
-                    // Se não houver range definido, mostra hoje e ontem por padrão conforme original
                     const itemDateStr = formatarData(item.dataHora);
                     const hoje = new Date().toLocaleDateString('pt-BR'); 
                     const ontem = new Date(); ontem.setDate(ontem.getDate() - 1); 
@@ -236,10 +247,9 @@ createApp({
         const produtosFiltrados = computed(() => { if (!produtoSearch.value) return cadastros.value.produtos; return cadastros.value.produtos.filter(p => p.nome.toLowerCase().includes(produtoSearch.value.toLowerCase())); });
         const selecionarProduto = (nome) => { form.value.produto = nome; produtoSearch.value = nome; mostrandoListaProdutos.value = false; salvarRascunho(); };
         
-        // Alterado para mostrar apenas os últimos 5 produtos cadastrados
         const produtosAdminFiltrados = computed(() => { 
             let lista = [...cadastros.value.produtos]; 
-            lista.reverse(); // Garante que o último inserido venha primeiro (assumindo ordem de inserção do banco)
+            lista.reverse(); 
             if (filtroAdminProdutos.value) { 
                 lista = lista.filter(p => p.nome.toLowerCase().includes(filtroAdminProdutos.value.toLowerCase())); 
             } 
@@ -255,12 +265,12 @@ createApp({
             try { await updateDoc(doc(db, "inspecoes", rel.id), { pecas: rel.pecas, resultado: novoResultado }); notify('Salvo', 'Atualizado.', 'sucesso'); relatorioSelecionado.value = null; } catch (e) { notify('Erro', 'Falha ao salvar.', 'erro'); }
         };
 
-        const handleLogin = () => { loading.value = true; setTimeout(() => { const { user, pass, remember } = loginData.value; const userLower = user.toLowerCase(); if (userLower === 'admin' && pass === 'admin') { currentView.value = 'admin'; notify('Super Admin', 'OK', 'sucesso'); loading.value = false; return; } const usuarioEncontrado = cadastros.value.usuarios.find(u => u.login === userLower && u.matricula === pass); if (usuarioEncontrado) { if (remember) { localStorage.setItem('qc_user', userLower); localStorage.setItem('qc_pass', pass); } else { localStorage.removeItem('qc_user'); localStorage.removeItem('qc_pass'); } if (usuarioEncontrado.admin) { currentView.value = 'admin'; } else { currentView.value = 'inspector'; if(form.value.pecas.length === 0) adicionarPeca(); } notify('Bem-vindo', `Olá, ${usuarioEncontrado.nome}`, 'sucesso'); } else { notify('Erro', 'Incorreto.', 'erro'); } loading.value = false; }, 600); };
+        const handleLogin = () => { loading.value = true; setTimeout(() => { const { user, pass, remember } = loginData.value; const userLower = user.toLowerCase(); if (userLower === 'admin' && pass === 'admin') { currentView.value = 'admin'; notify('Super Admin', 'OK', 'sucesso'); loading.value = false; return; } const usuarioEncontrado = cadastros.value.usuarios.find(u => u.login === userLower && u.matricula === pass); if (usuarioEncontrado) { if (remember) { localStorage.setItem('qc_user', userLower); localStorage.setItem('qc_pass', pass); } else { localStorage.removeItem('qc_user'); localStorage.removeItem('qc_pass'); } if (usuarioEncontrado.admin) { currentView.value = 'admin'; } else { currentView.value = 'inspector'; if(form.value.pecas.length === 0) adicionarPeca(); showStartModal.value = true; } notify('Bem-vindo', `Olá, ${usuarioEncontrado.nome}`, 'sucesso'); } else { notify('Erro', 'Incorreto.', 'erro'); } loading.value = false; }, 600); };
         const cadastrarUsuario = async () => { const { nome, matricula, admin } = novoUsuarioForm.value; if (!nome || !matricula) { notify('Erro', 'Preencha tudo', 'erro'); return; } const partesNome = nome.trim().toLowerCase().split(' '); const primeiroNome = partesNome[0]; const ultimoSobrenome = partesNome.length > 1 ? partesNome[partesNome.length - 1] : ''; const loginGerado = ultimoSobrenome ? `${primeiroNome}.${ultimoSobrenome}` : primeiroNome; const loginFinal = loginGerado.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); try { await addDoc(collection(db, "usuarios"), { nome: nome, matricula: matricula, login: loginFinal, admin: admin }); novoUsuarioForm.value = { nome: '', matricula: '', admin: false }; notify('Sucesso', `Login: ${loginFinal}`, 'sucesso'); } catch (e) { notify('Erro', e.message, 'erro'); } };
         
         const mascararInput = (event, pecaObj, tipo, chave) => { let input = event.target; let valorOriginal = input.value; let isNegative = valorOriginal.includes('-'); let numeros = valorOriginal.replace(/\D/g, ''); let digitosReais = numeros.replace(/^0+/, ''); let valorVisual = ''; let valorFloat = 0; if (numeros.length > 0) { valorFloat = parseInt(numeros) / 100; valorVisual = valorFloat.toFixed(2).replace('.', ','); } if (isNegative) { valorVisual = '-' + valorVisual; valorFloat = valorFloat * -1; } if (numeros.length === 0 && !isNegative) { valorVisual = ''; valorFloat = null; } else if (numeros.length === 0 && isNegative) { valorVisual = '-'; } if (tipo === 'laterais') { pecaObj.lateraisDisplay[chave] = valorVisual; pecaObj.laterais[chave] = valorFloat; } else { pecaObj.centraisDisplay[chave] = valorVisual; pecaObj.centrais[chave] = valorFloat; } input.value = valorVisual; if (digitosReais.length >= 3) focarProximoInput(input); salvarRascunho(); };
         
-        const salvarRascunho = async () => { if (!form.value.formatoId) return; salvandoAuto.value = true; const limitesSnapshot = { latMin: configAtiva.value.latMin, latMax: configAtiva.value.latMax, centMin: configAtiva.value.centMin, centMax: configAtiva.value.centMax }; let resultadoGeral = 'Aprovado'; form.value.pecas.forEach(p => { Object.values(p.laterais).forEach(v => { if(getStatusClass(v, 'lateral') === 'status-bad') resultadoGeral = 'Reprovado'; }); Object.values(p.centrais).forEach(v => { if(getStatusClass(v, 'central') === 'status-bad') resultadoGeral = 'Reprovado'; }); }); const dados = { inspetor: loginData.value.user, dataHora: new Date(), linha: form.value.linha, produto: form.value.produto, formatoId: form.value.formatoId, formatoNome: configAtiva.value.nome, limitesSnapshot: limitesSnapshot, lote: form.value.lote ? form.value.lote.toUpperCase() : '', posFolga: form.value.posFolga, resultado: resultadoGeral, pecas: form.value.pecas.map(p => ({ laterais: p.laterais, centrais: p.centrais })), status: 'rascunho' }; try { if (currentInspectionId.value) { await updateDoc(doc(db, "inspecoes", currentInspectionId.value), dados); } else { const ref = await addDoc(collection(db, "inspecoes"), dados); currentInspectionId.value = ref.id; } } catch (e) { console.error(e); } finally { setTimeout(() => salvandoAuto.value = false, 500); } };
+        const salvarRascunho = async () => { if (!form.value.formatoId || showStartModal.value) return; salvandoAuto.value = true; const limitesSnapshot = { latMin: configAtiva.value.latMin, latMax: configAtiva.value.latMax, centMin: configAtiva.value.centMin, centMax: configAtiva.value.centMax }; let resultadoGeral = 'Aprovado'; form.value.pecas.forEach(p => { Object.values(p.laterais).forEach(v => { if(getStatusClass(v, 'lateral') === 'status-bad') resultadoGeral = 'Reprovado'; }); Object.values(p.centrais).forEach(v => { if(getStatusClass(v, 'central') === 'status-bad') resultadoGeral = 'Reprovado'; }); }); const dados = { inspetor: loginData.value.user, dataHora: new Date(), linha: form.value.linha, produto: form.value.produto, formatoId: form.value.formatoId, formatoNome: configAtiva.value.nome, limitesSnapshot: limitesSnapshot, lote: form.value.lote ? form.value.lote.toUpperCase() : '', posFolga: form.value.posFolga, resultado: resultadoGeral, pecas: form.value.pecas.map(p => ({ laterais: p.laterais, centrais: p.centrais })), status: 'rascunho' }; try { if (currentInspectionId.value) { await updateDoc(doc(db, "inspecoes", currentInspectionId.value), dados); } else { const ref = await addDoc(collection(db, "inspecoes"), dados); currentInspectionId.value = ref.id; } } catch (e) { console.error(e); } finally { setTimeout(() => salvandoAuto.value = false, 500); } };
         
         const gerarRelatorioFinal = async () => {
             if (!form.value.linha || !form.value.produto || !form.value.formatoId) { notify('Erro', 'Cabeçalho incompleto.', 'erro'); return; }
@@ -283,11 +293,24 @@ createApp({
         const formatarData = (ts) => ts && ts.seconds ? new Date(ts.seconds * 1000).toLocaleDateString('pt-BR') : '-';
         const abrirDetalhesRelatorio = (r) => relatorioSelecionado.value = r;
         
-        // Função limpar filtros atualizada
         const limparFiltros = () => filtros.value = { dataInicio: '', dataFim: '', produto: '', lote: '', posFolga: '', resultado: '' };
         
         const logout = () => { currentView.value = 'login'; loginData.value = { user: '', pass: '', remember: false }; localStorage.removeItem('qc_user'); localStorage.removeItem('qc_pass'); };
-        const novaInspecaoLimpa = () => { reportText.value = ''; currentInspectionId.value = null; form.value.pecas = []; form.value.lote = ''; form.value.posFolga = ''; form.value.produto = ''; produtoSearch.value = ''; adicionarPeca(); };
+        
+        // Atualizado para limpar os dados corretamente e exibir a tela inicial
+        const novaInspecaoLimpa = () => { 
+            reportText.value = ''; 
+            currentInspectionId.value = null; 
+            form.value.pecas = []; 
+            form.value.lote = ''; 
+            form.value.posFolga = ''; 
+            form.value.produto = ''; 
+            form.value.linha = ''; 
+            form.value.formatoId = '';
+            produtoSearch.value = ''; 
+            showStartModal.value = true;
+            adicionarPeca(); 
+        };
         
         const novoFormato = async () => { const n = prompt("Nome do Formato:"); if(n) addDoc(collection(db,"formatos"), {nome:n, latMin:-0.5, latMax:0.5, centMin:-1, centMax:1}); };
         
@@ -351,7 +374,7 @@ createApp({
             novoFormato, novoItemSimples, removerItem, atualizarFormato, atualizarItemSimples,
             formatarData, copiarTexto, enviarZap, stats, novoUsuarioForm, cadastrarUsuario,
             produtoSearch, produtosFiltrados, selecionarProduto, mostrandoListaProdutos, filtroAdminProdutos, produtosAdminFiltrados,
-            isDarkMode, toggleDarkMode, filtrosGrafico
+            isDarkMode, toggleDarkMode, filtrosGrafico, showStartModal, iniciarAnalise
         };
     }
 }).mount('#app');
