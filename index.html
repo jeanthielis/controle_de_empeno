@@ -75,11 +75,11 @@
                 <form @submit.prevent="handleLogin" class="space-y-4">
                     <div>
                         <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Usuário</label>
-                        <input type="text" v-model="loginData.user" @input="loginData.user = loginData.user.toLowerCase()" class="input-clean lowercase" placeholder="nome.sobrenome">
+                        <input type="text" v-model="loginData.user" @input="loginData.user = loginData.user.toLowerCase()" class="input-clean lowercase w-full" placeholder="nome.sobrenome">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Senha</label>
-                        <input type="password" v-model="loginData.pass" class="input-clean" placeholder="••••••••">
+                        <input type="password" v-model="loginData.pass" class="input-clean w-full" placeholder="••••••••">
                     </div>
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" v-model="loginData.remember" class="w-4 h-4 text-blue-600 rounded dark:bg-slate-950 dark:border-slate-700">
@@ -151,9 +151,13 @@
                             <div class="flex flex-wrap gap-2 w-full md:w-auto">
                                 <input v-model="filtros.lote" placeholder="Lote" class="input-clean py-1.5 text-xs w-20">
                                 <input v-model="filtros.produto" placeholder="Produto" class="input-clean py-1.5 text-xs flex-1 md:w-32">
-                                <input type="date" v-model="filtros.data" class="input-clean py-1.5 text-xs w-28">
+                                <input type="date" v-model="filtros.dataInicio" class="input-clean py-1.5 text-xs w-28" placeholder="Início">
+                                <input type="date" v-model="filtros.dataFim" class="input-clean py-1.5 text-xs w-28" placeholder="Fim">
                                 <select v-model="filtros.posFolga" class="input-clean py-1.5 text-xs w-24">
                                     <option value="">PosFolga: Todos</option><option value="Sim">Sim</option><option value="Não">Não</option>
+                                </select>
+                                <select v-model="filtros.resultado" class="input-clean py-1.5 text-xs w-24">
+                                    <option value="">Status: Todos</option><option value="Aprovado">Aprovado</option><option value="Reprovado">Reprovado</option>
                                 </select>
                                 <button @click="limparFiltros" class="text-xs text-red-500 hover:underline">Limpar</button>
                             </div>
@@ -285,38 +289,82 @@
             </div>
         </div>
 
-        <div v-else-if="currentView === 'inspector'" class="flex flex-col h-screen">
+        <div v-else-if="currentView === 'inspector'" class="flex flex-col h-screen relative">
             <header class="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 px-4 py-3 shadow-sm flex justify-between items-center z-20">
                 <div class="flex items-center gap-2 font-bold text-gray-800 dark:text-white"><i class="ph-fill ph-check-square text-blue-600 text-xl"></i> <span class="hidden sm:inline">Empeno Pro</span></div>
                 <div class="flex items-center gap-3"><div class="text-xs text-right hidden sm:block"><div class="font-bold text-gray-800 dark:text-white">{{ loginData.user }}</div><div class="text-gray-400">Inspetor</div></div><button @click="logout" class="text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full"><i class="ph ph-sign-out text-xl"></i></button></div>
             </header>
-            <div class="bg-white dark:bg-slate-900 border-b dark:border-slate-800 p-4 shadow-sm z-10 space-y-3">
-                <div class="grid grid-cols-2 md:grid-cols-5 gap-3 items-center">
-                    <select v-model="form.linha" @change="salvarRascunho" class="input-clean"><option value="">Linha...</option><option v-for="l in cadastros.linhas" :value="l.nome">{{ l.nome }}</option></select>
-                    <select v-model="form.formatoId" @change="salvarRascunho" class="input-clean"><option value="">Formato...</option><option v-for="f in cadastros.formatos" :value="f.id">{{ f.nome }}</option></select>
-                    <div class="relative group">
-                        <input v-model="produtoSearch" @focus="mostrandoListaProdutos = true" @blur="setTimeout(() => mostrandoListaProdutos = false, 200)" placeholder="Buscar Produto..." class="input-clean w-full pl-8" :class="form.produto ? 'border-green-400 bg-green-50 dark:bg-green-900/20 dark:border-green-800 text-green-800 dark:text-green-400 font-bold' : ''"><i class="ph ph-magnifying-glass absolute left-2.5 top-3 text-gray-400"></i>
-                        <div v-if="mostrandoListaProdutos" class="absolute top-full left-0 w-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xl rounded-lg mt-1 max-h-60 overflow-y-auto z-50"><div v-for="p in produtosFiltrados" @click="selecionarProduto(p.nome)" class="p-2.5 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer border-b border-gray-50 dark:border-slate-800 text-gray-700 dark:text-gray-300">{{ p.nome }}</div></div>
+
+            <div v-if="showStartModal" class="absolute inset-0 top-[60px] z-40 bg-gray-50 dark:bg-slate-950 flex flex-col p-4 overflow-y-auto">
+                <div class="m-auto w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-800 p-6 space-y-4 animate-scale-in">
+                    <div class="text-center mb-6">
+                        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300 mb-2">
+                            <i class="ph-fill ph-clipboard-text text-2xl"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold dark:text-white">Nova Inspeção</h2>
+                        <p class="text-xs text-gray-500">Preencha os dados do lote para começar</p>
                     </div>
-                    <input v-model="form.lote" @input="form.lote = form.lote.toUpperCase()" class="input-clean uppercase font-bold" placeholder="LOTE">
-                    <select v-model="form.posFolga" @change="salvarRascunho" class="input-clean border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 font-medium text-blue-800 dark:text-blue-300"><option value="">Pós Folga? *</option><option value="Sim">Sim</option><option value="Não">Não</option></select>
-                </div>
-            </div>
-            <main class="flex-1 overflow-y-auto p-4 bg-gray-100 dark:bg-slate-950 pb-32">
-                <div class="max-w-3xl mx-auto space-y-4">
-                    <div v-if="!form.formatoId" class="text-center p-8 text-gray-400">Selecione um formato para começar.</div>
-                    <div v-for="(peca, idx) in form.pecas" :key="idx" class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden animate-fade-in">
-                        <div class="bg-gray-50 dark:bg-slate-900 dark:border-slate-800 px-4 py-2 border-b flex justify-between items-center"><span class="font-bold text-gray-600 dark:text-gray-300 text-sm">PEÇA {{ idx + 1 }}</span><button @click="removerPeca(idx)" class="text-red-400 hover:text-red-600"><i class="ph ph-trash"></i></button></div>
-                        <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div><span class="text-[10px] font-bold text-blue-500 uppercase mb-2 block">Laterais</span><div class="grid grid-cols-4 gap-2"><div v-for="lado in ['A','B','C','D']" class="relative"><input type="text" :value="peca.lateraisDisplay[lado]" @input="(e) => mascararInput(e, peca, 'laterais', lado)" class="input-medicao" :class="getStatusClass(peca.laterais[lado], 'lateral')" placeholder="0,00"><span class="absolute top-1 left-1 text-[8px] font-bold text-gray-400">{{ lado }}</span></div></div></div>
-                            <div><span class="text-[10px] font-bold text-emerald-500 uppercase mb-2 block">Centrais</span><div class="grid grid-cols-2 gap-2"><div v-for="c in [1,2]" class="relative"><input type="text" :value="peca.centraisDisplay[c]" @input="(e) => mascararInput(e, peca, 'centrais', c)" class="input-medicao" :class="getStatusClass(peca.centrais[c], 'central')" placeholder="0,00"><span class="absolute top-1 left-1 text-[8px] font-bold text-gray-400">C{{ c }}</span></div></div></div>
+
+                    <div class="space-y-4 text-left">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Linha</label>
+                            <select v-model="form.linha" class="input-clean w-full"><option value="">Selecione...</option><option v-for="l in cadastros.linhas" :value="l.nome">{{ l.nome }}</option></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Formato</label>
+                            <select v-model="form.formatoId" class="input-clean w-full"><option value="">Selecione...</option><option v-for="f in cadastros.formatos" :value="f.id">{{ f.nome }}</option></select>
+                        </div>
+                        <div class="relative group">
+                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Produto</label>
+                            <input v-model="produtoSearch" @focus="mostrandoListaProdutos = true" @blur="setTimeout(() => mostrandoListaProdutos = false, 200)" placeholder="Buscar Produto..." class="input-clean w-full pl-8" :class="form.produto ? 'border-green-400 bg-green-50 dark:bg-green-900/20 dark:border-green-800 text-green-800 dark:text-green-400 font-bold' : ''"><i class="ph ph-magnifying-glass absolute left-2.5 top-[2.1rem] text-gray-400"></i>
+                            <div v-if="mostrandoListaProdutos" class="absolute top-full left-0 w-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xl rounded-lg mt-1 max-h-48 overflow-y-auto z-50"><div v-for="p in produtosFiltrados" @click="selecionarProduto(p.nome)" class="p-2.5 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer border-b border-gray-50 dark:border-slate-800 text-gray-700 dark:text-gray-300">{{ p.nome }}</div></div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Lote</label>
+                            <input v-model="form.lote" @input="form.lote = form.lote.toUpperCase()" class="input-clean w-full uppercase font-bold" placeholder="EX: A123">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Pós Folga?</label>
+                            <select v-model="form.posFolga" class="input-clean w-full border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 font-medium text-blue-800 dark:text-blue-300"><option value="">Selecione...</option><option value="Sim">Sim</option><option value="Não">Não</option></select>
                         </div>
                     </div>
-                    <button @click="adicionarPeca" class="w-full py-4 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl text-gray-400 hover:border-blue-500 hover:text-blue-500 transition font-medium bg-white dark:bg-slate-900"><i class="ph ph-plus-circle text-xl align-middle"></i> Nova Peça</button>
+
+                    <button @click="iniciarAnalise" class="btn-primary w-full py-4 text-lg mt-6 shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2">
+                        <i class="ph-bold ph-play"></i> Iniciar Análise
+                    </button>
                 </div>
-            </main>
-            <div class="fixed bottom-2 left-0 right-0 flex justify-center z-50 pointer-events-none">
-                <button @click="gerarRelatorioFinal" class="pointer-events-auto bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 py-3 shadow-2xl flex items-center gap-3 transition-transform hover:scale-105 active:scale-95 border-2 border-white/20 backdrop-blur-sm"><i class="ph-fill ph-check-circle text-2xl"></i> <span class="font-bold text-lg">Concluir</span></button>
+            </div>
+
+            <div v-else class="flex flex-col h-full overflow-hidden">
+                <div class="bg-white dark:bg-slate-900 border-b dark:border-slate-800 p-3 shadow-sm z-10">
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-2 items-center opacity-70 hover:opacity-100 transition-opacity">
+                        <select v-model="form.linha" @change="salvarRascunho" class="input-clean py-1.5 text-sm"><option value="">Linha...</option><option v-for="l in cadastros.linhas" :value="l.nome">{{ l.nome }}</option></select>
+                        <select v-model="form.formatoId" @change="salvarRascunho" class="input-clean py-1.5 text-sm"><option value="">Formato...</option><option v-for="f in cadastros.formatos" :value="f.id">{{ f.nome }}</option></select>
+                        <div class="relative group">
+                            <input v-model="produtoSearch" @focus="mostrandoListaProdutos = true" @blur="setTimeout(() => mostrandoListaProdutos = false, 200)" placeholder="Buscar Produto..." class="input-clean w-full pl-8 py-1.5 text-sm" :class="form.produto ? 'border-green-400 bg-green-50 dark:bg-green-900/20 dark:border-green-800 text-green-800 dark:text-green-400 font-bold' : ''"><i class="ph ph-magnifying-glass absolute left-2 top-2 text-gray-400"></i>
+                            <div v-if="mostrandoListaProdutos" class="absolute top-full left-0 w-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xl rounded-lg mt-1 max-h-60 overflow-y-auto z-50"><div v-for="p in produtosFiltrados" @click="selecionarProduto(p.nome)" class="p-2.5 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer border-b border-gray-50 dark:border-slate-800 text-gray-700 dark:text-gray-300">{{ p.nome }}</div></div>
+                        </div>
+                        <input v-model="form.lote" @input="form.lote = form.lote.toUpperCase()" class="input-clean py-1.5 text-sm uppercase font-bold" placeholder="LOTE">
+                        <select v-model="form.posFolga" @change="salvarRascunho" class="input-clean py-1.5 text-sm border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 font-medium text-blue-800 dark:text-blue-300"><option value="">Pós Folga?</option><option value="Sim">Sim</option><option value="Não">Não</option></select>
+                    </div>
+                </div>
+                
+                <main class="flex-1 overflow-y-auto p-4 bg-gray-100 dark:bg-slate-950 pb-32">
+                    <div class="max-w-3xl mx-auto space-y-4">
+                        <div v-for="(peca, idx) in form.pecas" :key="idx" class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden animate-fade-in">
+                            <div class="bg-gray-50 dark:bg-slate-900 dark:border-slate-800 px-4 py-2 border-b flex justify-between items-center"><span class="font-bold text-gray-600 dark:text-gray-300 text-sm">PEÇA {{ idx + 1 }}</span><button @click="removerPeca(idx)" class="text-red-400 hover:text-red-600"><i class="ph ph-trash"></i></button></div>
+                            <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div><span class="text-[10px] font-bold text-blue-500 uppercase mb-2 block">Laterais</span><div class="grid grid-cols-4 gap-2"><div v-for="lado in ['A','B','C','D']" class="relative"><input type="text" :value="peca.lateraisDisplay[lado]" @input="(e) => mascararInput(e, peca, 'laterais', lado)" class="input-medicao" :class="getStatusClass(peca.laterais[lado], 'lateral')" placeholder="0,00"><span class="absolute top-1 left-1 text-[8px] font-bold text-gray-400">{{ lado }}</span></div></div></div>
+                                <div><span class="text-[10px] font-bold text-emerald-500 uppercase mb-2 block">Centrais</span><div class="grid grid-cols-2 gap-2"><div v-for="c in [1,2]" class="relative"><input type="text" :value="peca.centraisDisplay[c]" @input="(e) => mascararInput(e, peca, 'centrais', c)" class="input-medicao" :class="getStatusClass(peca.centrais[c], 'central')" placeholder="0,00"><span class="absolute top-1 left-1 text-[8px] font-bold text-gray-400">C{{ c }}</span></div></div></div>
+                            </div>
+                        </div>
+                        <button @click="adicionarPeca" class="w-full py-4 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl text-gray-400 hover:border-blue-500 hover:text-blue-500 transition font-medium bg-white dark:bg-slate-900"><i class="ph ph-plus-circle text-xl align-middle"></i> Nova Peça</button>
+                    </div>
+                </main>
+                
+                <div class="fixed bottom-2 left-0 right-0 flex justify-center z-50 pointer-events-none">
+                    <button @click="gerarRelatorioFinal" class="pointer-events-auto bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 py-3 shadow-2xl flex items-center gap-3 transition-transform hover:scale-105 active:scale-95 border-2 border-white/20 backdrop-blur-sm"><i class="ph-fill ph-check-circle text-2xl"></i> <span class="font-bold text-lg">Concluir</span></button>
+                </div>
             </div>
         </div>
 
