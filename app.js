@@ -28,7 +28,17 @@ createApp({
         
         const adminTab = ref('dashboard'); 
         const mobileMenuOpen = ref(false); 
-        const filtros = ref({ data: '', produto: '', lote: '', posFolga: '' });
+        
+        // Filtros atualizados para incluir Range de Datas e Resultado
+        const filtros = ref({ 
+            dataInicio: '', 
+            dataFim: '', 
+            produto: '', 
+            lote: '', 
+            posFolga: '',
+            resultado: '' 
+        });
+
         const filtroAdminProdutos = ref(''); 
         const novoUsuarioForm = ref({ nome: '', matricula: '', admin: false });
         const cadastros = ref({ formatos: [], produtos: [], linhas: [], inspecoes: [], usuarios: [] });
@@ -195,11 +205,24 @@ createApp({
                 const matchProduto = filtros.value.produto ? item.produto?.toLowerCase().includes(filtros.value.produto.toLowerCase()) : true;
                 const matchLote = filtros.value.lote ? item.lote?.toLowerCase().includes(filtros.value.lote.toLowerCase()) : true;
                 const matchPosFolga = filtros.value.posFolga ? item.posFolga === filtros.value.posFolga : true;
-                const itemDateStr = formatarData(item.dataHora);
-                let matchData = false;
-                if (filtros.value.data) { matchData = itemDateStr === formatarDataInput(filtros.value.data); } 
-                else { const hoje = new Date().toLocaleDateString('pt-BR'); const ontem = new Date(); ontem.setDate(ontem.getDate() - 1); const ontemStr = ontem.toLocaleDateString('pt-BR'); matchData = (itemDateStr === hoje || itemDateStr === ontemStr); }
-                return matchProduto && matchLote && matchPosFolga && matchData;
+                const matchResultado = filtros.value.resultado ? item.resultado === filtros.value.resultado : true;
+                
+                let matchData = true;
+                if (filtros.value.dataInicio && filtros.value.dataFim) {
+                    const dataItem = item.dataHora?.seconds ? new Date(item.dataHora.seconds * 1000) : new Date(item.dataHora);
+                    const inicio = new Date(filtros.value.dataInicio + 'T00:00:00');
+                    const fim = new Date(filtros.value.dataFim + 'T23:59:59');
+                    matchData = (dataItem >= inicio && dataItem <= fim);
+                } else {
+                    // Se não houver range definido, mostra hoje e ontem por padrão conforme original
+                    const itemDateStr = formatarData(item.dataHora);
+                    const hoje = new Date().toLocaleDateString('pt-BR'); 
+                    const ontem = new Date(); ontem.setDate(ontem.getDate() - 1); 
+                    const ontemStr = ontem.toLocaleDateString('pt-BR');
+                    matchData = (itemDateStr === hoje || itemDateStr === ontemStr);
+                }
+
+                return matchProduto && matchLote && matchPosFolga && matchResultado && matchData;
             }).sort((a,b) => b.dataHora - a.dataHora);
         });
 
@@ -212,7 +235,16 @@ createApp({
 
         const produtosFiltrados = computed(() => { if (!produtoSearch.value) return cadastros.value.produtos; return cadastros.value.produtos.filter(p => p.nome.toLowerCase().includes(produtoSearch.value.toLowerCase())); });
         const selecionarProduto = (nome) => { form.value.produto = nome; produtoSearch.value = nome; mostrandoListaProdutos.value = false; salvarRascunho(); };
-        const produtosAdminFiltrados = computed(() => { let lista = [...cadastros.value.produtos]; lista.sort((a, b) => a.nome.localeCompare(b.nome)); if (filtroAdminProdutos.value) { lista = lista.filter(p => p.nome.toLowerCase().includes(filtroAdminProdutos.value.toLowerCase())); } return lista.slice(0, 5); });
+        
+        // Alterado para mostrar apenas os últimos 5 produtos cadastrados
+        const produtosAdminFiltrados = computed(() => { 
+            let lista = [...cadastros.value.produtos]; 
+            lista.reverse(); // Garante que o último inserido venha primeiro (assumindo ordem de inserção do banco)
+            if (filtroAdminProdutos.value) { 
+                lista = lista.filter(p => p.nome.toLowerCase().includes(filtroAdminProdutos.value.toLowerCase())); 
+            } 
+            return lista.slice(0, 5); 
+        });
 
         const salvarAlteracoesAdmin = async () => {
             if (!relatorioSelecionado.value) return;
@@ -249,20 +281,20 @@ createApp({
         const adicionarPeca = () => { form.value.pecas.push({ laterais: {A:null,B:null,C:null,D:null}, lateraisDisplay: {A:'',B:'',C:'',D:''}, centrais: {1:null,2:null}, centraisDisplay: {1:'',2:''} }); salvarRascunho(); };
         const removerPeca = (idx) => { if (form.value.pecas.length > 0) { form.value.pecas.splice(idx, 1); salvarRascunho(); } };
         const formatarData = (ts) => ts && ts.seconds ? new Date(ts.seconds * 1000).toLocaleDateString('pt-BR') : '-';
-        const formatarDataInput = (d) => { if(!d) return ''; if (typeof d === 'string' && d.includes('-')) { return d.split('-').reverse().join('/'); } return ''; };
         const abrirDetalhesRelatorio = (r) => relatorioSelecionado.value = r;
-        const limparFiltros = () => filtros.value = { data: '', produto: '', lote: '', posFolga: '' };
+        
+        // Função limpar filtros atualizada
+        const limparFiltros = () => filtros.value = { dataInicio: '', dataFim: '', produto: '', lote: '', posFolga: '', resultado: '' };
+        
         const logout = () => { currentView.value = 'login'; loginData.value = { user: '', pass: '', remember: false }; localStorage.removeItem('qc_user'); localStorage.removeItem('qc_pass'); };
         const novaInspecaoLimpa = () => { reportText.value = ''; currentInspectionId.value = null; form.value.pecas = []; form.value.lote = ''; form.value.posFolga = ''; form.value.produto = ''; produtoSearch.value = ''; adicionarPeca(); };
         
-        // --- BLOQUEIO DE DUPLICIDADE NO CADASTRO ---
         const novoFormato = async () => { const n = prompt("Nome do Formato:"); if(n) addDoc(collection(db,"formatos"), {nome:n, latMin:-0.5, latMax:0.5, centMin:-1, centMax:1}); };
         
         const novoItemSimples = async (collectionName) => { 
             const n = prompt("Nome:"); 
             if(!n) return; 
             const nomeTrimmed = n.trim();
-            // Verifica duplicidade
             const existe = cadastros.value[collectionName].some(item => item.nome.toLowerCase() === nomeTrimmed.toLowerCase());
             if (existe) {
                 notify('Atenção', 'Este item já está cadastrado.', 'erro');
@@ -278,11 +310,10 @@ createApp({
 
         const atualizarItemSimples = async (collectionName, item) => { 
             const nomeTrimmed = item.nome.trim();
-            // Verifica duplicidade na edição (ignora o próprio ID)
             const existe = cadastros.value[collectionName].some(i => i.nome.toLowerCase() === nomeTrimmed.toLowerCase() && i.id !== item.id);
             if (existe) {
                 notify('Atenção', 'Já existe um item com este nome.', 'erro');
-                return; // Impede atualização
+                return; 
             }
             try {
                 await updateDoc(doc(db, collectionName, item.id), {nome: nomeTrimmed}); 
