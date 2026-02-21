@@ -259,6 +259,17 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 p-4 mb-8">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold dark:text-white flex items-center gap-2"><i class="ph-fill ph-activity text-orange-500"></i> Controle Lateral (Picos e Vales)</h3>
+                            <span class="text-xs font-bold text-gray-500 bg-gray-100 dark:bg-slate-800 px-2 py-1 rounded">Visualização de Range (Últimos 20)</span>
+                        </div>
+                        <div class="relative h-72 w-full">
+                            <canvas id="lateralChart"></canvas>
+                        </div>
+                    </div>
+
                 </div>
 
                 <div v-if="adminTab === 'usuarios'">
@@ -322,9 +333,7 @@
                         </div>
                     </div>
                 </div>
-            </main>
-
-            <div v-if="relatorioSelecionado" class="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+            </main>            <div v-if="relatorioSelecionado" class="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
                 <div class="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-5xl h-[90vh] flex flex-col shadow-2xl relative">
                     <div id="modal-relatorio-content" class="flex flex-col h-full bg-white dark:bg-slate-900 p-1">
                         <div class="p-4 border-b dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-900 rounded-t-2xl" data-html2canvas-ignore>
