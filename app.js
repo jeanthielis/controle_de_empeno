@@ -85,16 +85,18 @@ createApp({
 
         let chartInstance = null;
         let trendChartInstance = null;
-        let lateralChartInstance = null; // Instância do novo gráfico
+        let lateralChartInstance = null; 
+        let centralChartInstance = null; // Instância para o novo gráfico central
         
         const filtrosGrafico = ref({ formato: '', data: new Date().toISOString().slice(0, 7) }); 
 
         const updateCharts = () => {
+            const formatoId = filtrosGrafico.value.formato;
+            
             // --- GRÁFICO 1: Barras de Qualidade (Aprovados vs Reprovados) ---
             const ctxQuality = document.getElementById('qualityChart');
             if (ctxQuality) {
                 const [ano, mes] = filtrosGrafico.value.data.split('-');
-                const formatoId = filtrosGrafico.value.formato;
 
                 const dadosFiltrados = cadastros.value.inspecoes.filter(i => {
                     const data = i.dataHora && i.dataHora.seconds ? new Date(i.dataHora.seconds * 1000) : new Date();
@@ -130,16 +132,25 @@ createApp({
                 });
             }
 
-            // --- PREPARAÇÃO DADOS PARA OS GRÁFICOS DE TENDÊNCIA E CONTROLE (Últimos 20) ---
-            const ultimasInspecoes = [...cadastros.value.inspecoes]
+            // --- PREPARAÇÃO DADOS PARA OS GRÁFICOS DE LINHA (Filtro por formato ativado) ---
+            let inspecoesLinha = [...cadastros.value.inspecoes];
+            if (formatoId) {
+                inspecoesLinha = inspecoesLinha.filter(i => i.formatoId === formatoId);
+            }
+
+            const ultimasInspecoes = inspecoesLinha
                 .sort((a,b) => {
                     const tA = a.dataHora?.seconds || 0;
                     const tB = b.dataHora?.seconds || 0;
                     return tA - tB;
                 })
-                .slice(-20);
+                .slice(-20); // Últimos 20 registros
 
-            const labelsTrend = ultimasInspecoes.map(i => i.formatoNome ? i.formatoNome : formatarData(i.dataHora));
+            // Se o formato estiver filtrado, mostra o lote. Se não, mostra o formato.
+            const labelsTrend = ultimasInspecoes.map(i => {
+                if (formatoId && i.lote) return `Lote ${i.lote}`;
+                return i.formatoNome ? i.formatoNome : formatarData(i.dataHora);
+            });
 
             // --- GRÁFICO 2: Tendência de Média Central ---
             const ctxTrend = document.getElementById('trendChart');
@@ -178,7 +189,7 @@ createApp({
                 });
             }
 
-            // --- GRÁFICO 3 (NOVO): Controle Lateral (Min/Max/Picos) ---
+            // --- GRÁFICO 3: Controle Lateral (Min/Max/Picos) ---
             const ctxLateral = document.getElementById('lateralChart');
             if (ctxLateral) {
                 const dataMaxMeasured = [];
@@ -187,10 +198,7 @@ createApp({
                 const dataLimitMin = [];
 
                 ultimasInspecoes.forEach(i => {
-                    let maxVal = -9999;
-                    let minVal = 9999;
-                    let hasData = false;
-
+                    let maxVal = -9999; let minVal = 9999; let hasData = false;
                     if (i.pecas) {
                         i.pecas.forEach(p => {
                             if (p.laterais) {
@@ -205,16 +213,9 @@ createApp({
                             }
                         });
                     }
+                    if (hasData) { dataMaxMeasured.push(maxVal); dataMinMeasured.push(minVal); } 
+                    else { dataMaxMeasured.push(null); dataMinMeasured.push(null); }
 
-                    if (hasData) {
-                        dataMaxMeasured.push(maxVal);
-                        dataMinMeasured.push(minVal);
-                    } else {
-                        dataMaxMeasured.push(null);
-                        dataMinMeasured.push(null);
-                    }
-
-                    // Tenta pegar o limite do snapshot da inspeção
                     const limites = i.limitesSnapshot || { latMax: 0.5, latMin: -0.5 };
                     dataLimitMax.push(limites.latMax);
                     dataLimitMin.push(limites.latMin);
@@ -227,71 +228,62 @@ createApp({
                     data: {
                         labels: labelsTrend, 
                         datasets: [
-                            {
-                                label: 'Limite Max',
-                                data: dataLimitMax,
-                                borderColor: 'rgba(239, 68, 68, 0.6)', // Vermelho
-                                borderDash: [5, 5], 
-                                pointRadius: 0, 
-                                borderWidth: 2,
-                                fill: false,
-                                tension: 0
-                            },
-                            {
-                                label: 'Limite Min',
-                                data: dataLimitMin,
-                                borderColor: 'rgba(239, 68, 68, 0.6)', // Vermelho
-                                borderDash: [5, 5], 
-                                pointRadius: 0,
-                                borderWidth: 2,
-                                fill: false,
-                                tension: 0
-                            },
-                            {
-                                label: 'Pico (Max Medido)',
-                                data: dataMaxMeasured,
-                                borderColor: '#3b82f6', // Azul
-                                backgroundColor: '#3b82f6',
-                                pointRadius: 4,
-                                borderWidth: 2,
-                                fill: false,
-                                tension: 0.3
-                            },
-                            {
-                                label: 'Vale (Min Medido)',
-                                data: dataMinMeasured,
-                                borderColor: '#f59e0b', // Laranja
-                                backgroundColor: '#f59e0b',
-                                pointRadius: 4,
-                                borderWidth: 2,
-                                fill: false,
-                                tension: 0.3
-                            }
+                            { label: 'Limite Max', data: dataLimitMax, borderColor: 'rgba(239, 68, 68, 0.6)', borderDash: [5, 5], pointRadius: 0, borderWidth: 2, fill: false, tension: 0 },
+                            { label: 'Limite Min', data: dataLimitMin, borderColor: 'rgba(239, 68, 68, 0.6)', borderDash: [5, 5], pointRadius: 0, borderWidth: 2, fill: false, tension: 0 },
+                            { label: 'Pico (Max)', data: dataMaxMeasured, borderColor: '#3b82f6', backgroundColor: '#3b82f6', pointRadius: 4, borderWidth: 2, fill: false, tension: 0.3 },
+                            { label: 'Vale (Min)', data: dataMinMeasured, borderColor: '#f59e0b', backgroundColor: '#f59e0b', pointRadius: 4, borderWidth: 2, fill: false, tension: 0.3 }
                         ]
                     },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        interaction: {
-                            mode: 'index',
-                            intersect: false,
-                        },
-                        plugins: {
-                            legend: { position: 'bottom' },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        return context.dataset.label + ': ' + context.parsed.y.toFixed(2);
+                    options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: function(context) { return context.dataset.label + ': ' + context.parsed.y.toFixed(2); } } } }, scales: { y: { title: { display: true, text: 'Medição Lateral' } } } }
+                });
+            }
+
+            // --- GRÁFICO 4: Controle Central (Min/Max/Picos) ---
+            const ctxCentral = document.getElementById('centralChart');
+            if (ctxCentral) {
+                const dataMaxCentral = [];
+                const dataMinCentral = [];
+                const dataLimitMaxCentral = [];
+                const dataLimitMinCentral = [];
+
+                ultimasInspecoes.forEach(i => {
+                    let maxVal = -9999; let minVal = 9999; let hasData = false;
+                    if (i.pecas) {
+                        i.pecas.forEach(p => {
+                            if (p.centrais) {
+                                Object.values(p.centrais).forEach(v => {
+                                    if (v !== null && v !== '') {
+                                        const num = parseFloat(v);
+                                        if (num > maxVal) maxVal = num;
+                                        if (num < minVal) minVal = num;
+                                        hasData = true;
                                     }
-                                }
+                                });
                             }
-                        },
-                        scales: {
-                            y: {
-                                title: { display: true, text: 'Medição Lateral' }
-                            }
-                        }
+                        });
                     }
+                    if (hasData) { dataMaxCentral.push(maxVal); dataMinCentral.push(minVal); } 
+                    else { dataMaxCentral.push(null); dataMinCentral.push(null); }
+
+                    const limites = i.limitesSnapshot || { centMax: 1.0, centMin: -1.0 };
+                    dataLimitMaxCentral.push(limites.centMax);
+                    dataLimitMinCentral.push(limites.centMin);
+                });
+
+                if (centralChartInstance) centralChartInstance.destroy();
+
+                centralChartInstance = new Chart(ctxCentral, {
+                    type: 'line',
+                    data: {
+                        labels: labelsTrend, 
+                        datasets: [
+                            { label: 'Limite Max', data: dataLimitMaxCentral, borderColor: 'rgba(239, 68, 68, 0.6)', borderDash: [5, 5], pointRadius: 0, borderWidth: 2, fill: false, tension: 0 },
+                            { label: 'Limite Min', data: dataLimitMinCentral, borderColor: 'rgba(239, 68, 68, 0.6)', borderDash: [5, 5], pointRadius: 0, borderWidth: 2, fill: false, tension: 0 },
+                            { label: 'Pico Central (Max)', data: dataMaxCentral, borderColor: '#10b981', backgroundColor: '#10b981', pointRadius: 4, borderWidth: 2, fill: false, tension: 0.3 },
+                            { label: 'Vale Central (Min)', data: dataMinCentral, borderColor: '#8b5cf6', backgroundColor: '#8b5cf6', pointRadius: 4, borderWidth: 2, fill: false, tension: 0.3 }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: function(context) { return context.dataset.label + ': ' + context.parsed.y.toFixed(2); } } } }, scales: { y: { title: { display: true, text: 'Medição Central' } } } }
                 });
             }
         };
