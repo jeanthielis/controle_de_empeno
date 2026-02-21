@@ -86,14 +86,14 @@ createApp({
         let chartInstance = null;
         let trendChartInstance = null;
         let lateralChartInstance = null; 
-        let centralChartInstance = null; // Instância para o novo gráfico central
+        let centralChartInstance = null; 
         
         const filtrosGrafico = ref({ formato: '', data: new Date().toISOString().slice(0, 7) }); 
 
         const updateCharts = () => {
             const formatoId = filtrosGrafico.value.formato;
             
-            // --- GRÁFICO 1: Barras de Qualidade (Aprovados vs Reprovados) ---
+            // --- GRÁFICO 1: Barras de Qualidade ---
             const ctxQuality = document.getElementById('qualityChart');
             if (ctxQuality) {
                 const [ano, mes] = filtrosGrafico.value.data.split('-');
@@ -132,7 +132,7 @@ createApp({
                 });
             }
 
-            // --- PREPARAÇÃO DADOS PARA OS GRÁFICOS DE LINHA (Filtro por formato ativado) ---
+            // --- PREPARAÇÃO DADOS PARA OS GRÁFICOS DE LINHA ---
             let inspecoesLinha = [...cadastros.value.inspecoes];
             if (formatoId) {
                 inspecoesLinha = inspecoesLinha.filter(i => i.formatoId === formatoId);
@@ -144,9 +144,8 @@ createApp({
                     const tB = b.dataHora?.seconds || 0;
                     return tA - tB;
                 })
-                .slice(-20); // Últimos 20 registros
+                .slice(-20); 
 
-            // Se o formato estiver filtrado, mostra o lote. Se não, mostra o formato.
             const labelsTrend = ultimasInspecoes.map(i => {
                 if (formatoId && i.lote) return `Lote ${i.lote}`;
                 return i.formatoNome ? i.formatoNome : formatarData(i.dataHora);
@@ -189,7 +188,7 @@ createApp({
                 });
             }
 
-            // --- GRÁFICO 3: Controle Lateral (Min/Max/Picos) ---
+            // --- GRÁFICO 3: Controlo Lateral (Min/Max/Picos) ---
             const ctxLateral = document.getElementById('lateralChart');
             if (ctxLateral) {
                 const dataMaxMeasured = [];
@@ -238,7 +237,7 @@ createApp({
                 });
             }
 
-            // --- GRÁFICO 4: Controle Central (Min/Max/Picos) ---
+            // --- GRÁFICO 4: Controlo Central (Min/Max/Picos) ---
             const ctxCentral = document.getElementById('centralChart');
             if (ctxCentral) {
                 const dataMaxCentral = [];
@@ -410,9 +409,47 @@ createApp({
             }).sort((a,b) => b.dataHora - a.dataHora);
         });
 
+        const exportarCSV = () => {
+            if (relatoriosFiltrados.value.length === 0) {
+                notify('Aviso', 'Não há dados para exportar com os filtros atuais.', 'erro');
+                return;
+            }
+            
+            let csv = '\uFEFF'; 
+            csv += "Data;Hora;Inspetor;Linha;Produto;Formato;Lote;Pós Folga;Resultado\n";
+            
+            relatoriosFiltrados.value.forEach(rel => {
+                const dataObj = rel.dataHora?.seconds ? new Date(rel.dataHora.seconds * 1000) : new Date(rel.dataHora);
+                const dataStr = dataObj.toLocaleDateString('pt-BR');
+                const horaStr = dataObj.toLocaleTimeString('pt-BR');
+                
+                const inspetor = rel.inspetor || '';
+                const linha = rel.linha || '';
+                const produto = rel.produto || '';
+                const formato = rel.formatoNome || '';
+                const lote = rel.lote || '';
+                const posFolga = rel.posFolga || '';
+                const resultado = rel.resultado || '';
+                
+                csv += `"${dataStr}";"${horaStr}";"${inspetor}";"${linha}";"${produto}";"${formato}";"${lote}";"${posFolga}";"${resultado}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Inspecao_Qualidade_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            notify('Sucesso', 'Ficheiro Excel gerado com sucesso.', 'sucesso');
+        };
+
         const removerInspecao = async (id) => {
-            if(confirm('Tem certeza que deseja EXCLUIR este registro?')) {
-                try { await deleteDoc(doc(db, "inspecoes", id)); notify('Excluído', 'Registro removido.', 'sucesso'); } 
+            if(confirm('Tem certeza que deseja EXCLUIR este registo?')) {
+                try { await deleteDoc(doc(db, "inspecoes", id)); notify('Excluído', 'Registo removido.', 'sucesso'); } 
                 catch(e) { notify('Erro', 'Erro ao excluir.', 'erro'); }
             }
         };
@@ -511,7 +548,7 @@ createApp({
                 const text = e.target.result;
                 const linhas = text.split('\n').map(l => l.trim()).filter(l => l);
                 let importados = 0;
-                notify('Importação', 'Processando...', 'info');
+                notify('Importação', 'A processar...', 'info');
                 
                 for (const nome of linhas) {
                     const existe = cadastros.value.produtos.some(p => p.nome.toLowerCase() === nome.toLowerCase());
@@ -568,7 +605,7 @@ createApp({
             adminTab, mobileMenuOpen, navigateAdmin, cadastros, filtros, relatoriosFiltrados, limparFiltros,
             relatorioSelecionado, abrirDetalhesRelatorio, getStatusRelatorio, salvarAlteracoesAdmin, removerInspecao, baixarPrintRelatorio,
             form, mascararInput, getStatusClass, adicionarPeca, removerPeca, salvarRascunho, gerarRelatorioFinal, reportText, novaInspecaoLimpa,
-            novoFormato, novoItemSimples, removerItem, atualizarFormato, atualizarItemSimples, importarProdutosCSV,
+            novoFormato, novoItemSimples, removerItem, atualizarFormato, atualizarItemSimples, importarProdutosCSV, exportarCSV,
             formatarData, copiarTexto, enviarZap, stats, novoUsuarioForm, cadastrarUsuario, setFiltroRapido,
             produtoSearch, produtosFiltrados, selecionarProduto, mostrandoListaProdutos, filtroAdminProdutos, produtosAdminFiltrados,
             isDarkMode, toggleDarkMode, filtrosGrafico, showStartModal, iniciarAnalise
