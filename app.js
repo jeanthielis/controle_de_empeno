@@ -29,7 +29,6 @@ createApp({
         const adminTab = ref('dashboard'); 
         const mobileMenuOpen = ref(false); 
         
-        // Nova variável para controlar a tela inicial do inspetor
         const showStartModal = ref(true);
         
         const filtros = ref({ 
@@ -40,6 +39,30 @@ createApp({
             posFolga: '',
             resultado: '' 
         });
+
+        // Nova função: Filtros Rápidos do Admin
+        const setFiltroRapido = (tipo) => {
+            const hoje = new Date();
+            // Ajuste de fuso horário para garantir a data local correta
+            const timezoneOffset = hoje.getTimezoneOffset() * 60000;
+            const dataLocal = new Date(hoje.getTime() - timezoneOffset);
+            const strHoje = dataLocal.toISOString().split('T')[0];
+            
+            if (tipo === 'hoje') {
+                filtros.value.dataInicio = strHoje;
+                filtros.value.dataFim = strHoje;
+                filtros.value.resultado = '';
+            } else if (tipo === 'reprovados_hoje') {
+                filtros.value.dataInicio = strHoje;
+                filtros.value.dataFim = strHoje;
+                filtros.value.resultado = 'Reprovado';
+            } else if (tipo === 'mes') {
+                const primeiroDia = new Date(dataLocal.getFullYear(), dataLocal.getMonth(), 1).toISOString().split('T')[0];
+                filtros.value.dataInicio = primeiroDia;
+                filtros.value.dataFim = strHoje;
+                filtros.value.resultado = '';
+            }
+        };
 
         const filtroAdminProdutos = ref(''); 
         const novoUsuarioForm = ref({ nome: '', matricula: '', admin: false });
@@ -53,7 +76,6 @@ createApp({
 
         const navigateAdmin = (tab) => { adminTab.value = tab; mobileMenuOpen.value = false; };
 
-        // Função para validar e iniciar a análise
         const iniciarAnalise = () => {
             if (!form.value.linha || !form.value.formatoId || !form.value.produto || !form.value.lote || !form.value.posFolga) {
                 notify('Atenção', 'Preencha todos os campos do cabeçalho para iniciar a análise.', 'erro');
@@ -63,57 +85,100 @@ createApp({
             salvarRascunho();
         };
 
-        const updateChart = () => {
-            const ctx = document.getElementById('qualityChart');
-            if (!ctx) return; 
-
-            const [ano, mes] = filtrosGrafico.value.data.split('-');
-            const formatoId = filtrosGrafico.value.formato;
-
-            const dadosFiltrados = cadastros.value.inspecoes.filter(i => {
-                const data = i.dataHora && i.dataHora.seconds ? new Date(i.dataHora.seconds * 1000) : new Date();
-                const matchData = data.getFullYear() == ano && (data.getMonth() + 1) == mes;
-                const matchFormato = formatoId ? i.formatoId === formatoId : true;
-                return matchData && matchFormato;
-            });
-
-            const diasNoMes = new Date(ano, mes, 0).getDate();
-            const labels = Array.from({length: diasNoMes}, (_, i) => i + 1);
-            const aprovados = new Array(diasNoMes).fill(0);
-            const reprovados = new Array(diasNoMes).fill(0);
-
-            dadosFiltrados.forEach(i => {
-                const data = i.dataHora && i.dataHora.seconds ? new Date(i.dataHora.seconds * 1000) : new Date();
-                const dia = data.getDate() - 1; 
-                if (i.resultado === 'Aprovado') aprovados[dia]++;
-                else reprovados[dia]++;
-            });
-
-            if (chartInstance) chartInstance.destroy();
-
-            chartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        { label: 'Aprovados', data: aprovados, backgroundColor: '#10b981', borderRadius: 4 },
-                        { label: 'Reprovados', data: reprovados, backgroundColor: '#ef4444', borderRadius: 4 }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: { stacked: true, grid: { display: false } },
-                        y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } }
-                    },
-                    plugins: { legend: { position: 'bottom' } }
-                }
-            });
-        };
-
-        const filtrosGrafico = ref({ formato: '', data: new Date().toISOString().slice(0, 7) }); 
         let chartInstance = null;
+        let trendChartInstance = null;
+        const filtrosGrafico = ref({ formato: '', data: new Date().toISOString().slice(0, 7) }); 
+
+        const updateCharts = () => {
+            // Gráfico 1: Barras Diárias
+            const ctxQuality = document.getElementById('qualityChart');
+            if (ctxQuality) {
+                const [ano, mes] = filtrosGrafico.value.data.split('-');
+                const formatoId = filtrosGrafico.value.formato;
+
+                const dadosFiltrados = cadastros.value.inspecoes.filter(i => {
+                    const data = i.dataHora && i.dataHora.seconds ? new Date(i.dataHora.seconds * 1000) : new Date();
+                    const matchData = data.getFullYear() == ano && (data.getMonth() + 1) == mes;
+                    const matchFormato = formatoId ? i.formatoId === formatoId : true;
+                    return matchData && matchFormato;
+                });
+
+                const diasNoMes = new Date(ano, mes, 0).getDate();
+                const labels = Array.from({length: diasNoMes}, (_, i) => i + 1);
+                const aprovados = new Array(diasNoMes).fill(0);
+                const reprovados = new Array(diasNoMes).fill(0);
+
+                dadosFiltrados.forEach(i => {
+                    const data = i.dataHora && i.dataHora.seconds ? new Date(i.dataHora.seconds * 1000) : new Date();
+                    const dia = data.getDate() - 1; 
+                    if (i.resultado === 'Aprovado') aprovados[dia]++;
+                    else reprovados[dia]++;
+                });
+
+                if (chartInstance) chartInstance.destroy();
+
+                chartInstance = new Chart(ctxQuality, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            { label: 'Aprovados', data: aprovados, backgroundColor: '#10b981', borderRadius: 4 },
+                            { label: 'Reprovados', data: reprovados, backgroundColor: '#ef4444', borderRadius: 4 }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { position: 'bottom' } } }
+                });
+            }
+
+            // Gráfico 2: Tendência de Desvio Central (Linha)
+            const ctxTrend = document.getElementById('trendChart');
+            if (ctxTrend) {
+                // Pega os últimos 20 lotes/inspeções chronologicamente
+                const ultimasInspecoes = [...cadastros.value.inspecoes]
+                    .sort((a,b) => {
+                        const tA = a.dataHora?.seconds || 0;
+                        const tB = b.dataHora?.seconds || 0;
+                        return tA - tB;
+                    })
+                    .slice(-20);
+
+                const labelsTrend = ultimasInspecoes.map(i => i.lote ? `Lote ${i.lote}` : formatarData(i.dataHora));
+                
+                // Calcula a média das medições centrais de todas as peças em cada inspeção
+                const dataTrend = ultimasInspecoes.map(i => {
+                    let sum = 0; let count = 0;
+                    if(i.pecas) {
+                        i.pecas.forEach(p => {
+                            if(p.centrais) {
+                                Object.values(p.centrais).forEach(v => {
+                                    if(v !== null && v !== '') { sum += parseFloat(v); count++; }
+                                });
+                            }
+                        });
+                    }
+                    return count > 0 ? (sum / count).toFixed(2) : 0;
+                });
+
+                if (trendChartInstance) trendChartInstance.destroy();
+
+                trendChartInstance = new Chart(ctxTrend, {
+                    type: 'line',
+                    data: {
+                        labels: labelsTrend,
+                        datasets: [{
+                            label: 'Média Desvio Central',
+                            data: dataTrend,
+                            borderColor: '#8b5cf6',
+                            backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#8b5cf6'
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: false } } }
+                });
+            }
+        };
 
         const baixarPrintRelatorio = async () => {
             const btn = document.getElementById('btn-print-action');
@@ -297,7 +362,6 @@ createApp({
         
         const logout = () => { currentView.value = 'login'; loginData.value = { user: '', pass: '', remember: false }; localStorage.removeItem('qc_user'); localStorage.removeItem('qc_pass'); };
         
-        // Atualizado para limpar os dados corretamente e exibir a tela inicial
         const novaInspecaoLimpa = () => { 
             reportText.value = ''; 
             currentInspectionId.value = null; 
@@ -331,6 +395,32 @@ createApp({
             }
         };
 
+        // Nova função: Importação em Massa de CSV
+        const importarProdutosCSV = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const text = e.target.result;
+                const linhas = text.split('\n').map(l => l.trim()).filter(l => l);
+                let importados = 0;
+                notify('Importação', 'Processando...', 'info');
+                
+                for (const nome of linhas) {
+                    const existe = cadastros.value.produtos.some(p => p.nome.toLowerCase() === nome.toLowerCase());
+                    if (!existe) {
+                        try {
+                            await addDoc(collection(db, 'produtos'), {nome: nome});
+                            importados++;
+                        } catch(err) { console.error(err); }
+                    }
+                }
+                notify('Concluído', `${importados} novos produtos importados.`, 'sucesso');
+                event.target.value = ''; // Reseta o input
+            };
+            reader.readAsText(file);
+        };
+
         const atualizarItemSimples = async (collectionName, item) => { 
             const nomeTrimmed = item.nome.trim();
             const existe = cadastros.value[collectionName].some(i => i.nome.toLowerCase() === nomeTrimmed.toLowerCase() && i.id !== item.id);
@@ -360,19 +450,19 @@ createApp({
             onSnapshot(collection(db, "usuarios"), s => cadastros.value.usuarios = s.docs.map(d=>({id:d.id,...d.data()})));
             onSnapshot(query(collection(db, "inspecoes"), orderBy("dataHora", "desc")), s => {
                 cadastros.value.inspecoes = s.docs.map(d=>({id:d.id,...d.data()}));
-                nextTick(() => { if (adminTab.value === 'dashboard') updateChart(); });
+                nextTick(() => { if (adminTab.value === 'dashboard') updateCharts(); });
             });
         });
 
-        watch([filtrosGrafico.value, adminTab], () => { if (adminTab.value === 'dashboard') nextTick(updateChart); });
+        watch([filtrosGrafico.value, adminTab], () => { if (adminTab.value === 'dashboard') nextTick(updateCharts); });
 
         return {
             notificacoes, salvandoAuto, currentView, loginData, handleLogin, logout, loading,
             adminTab, mobileMenuOpen, navigateAdmin, cadastros, filtros, relatoriosFiltrados, limparFiltros,
             relatorioSelecionado, abrirDetalhesRelatorio, getStatusRelatorio, salvarAlteracoesAdmin, removerInspecao, baixarPrintRelatorio,
             form, mascararInput, getStatusClass, adicionarPeca, removerPeca, salvarRascunho, gerarRelatorioFinal, reportText, novaInspecaoLimpa,
-            novoFormato, novoItemSimples, removerItem, atualizarFormato, atualizarItemSimples,
-            formatarData, copiarTexto, enviarZap, stats, novoUsuarioForm, cadastrarUsuario,
+            novoFormato, novoItemSimples, removerItem, atualizarFormato, atualizarItemSimples, importarProdutosCSV,
+            formatarData, copiarTexto, enviarZap, stats, novoUsuarioForm, cadastrarUsuario, setFiltroRapido,
             produtoSearch, produtosFiltrados, selecionarProduto, mostrandoListaProdutos, filtroAdminProdutos, produtosAdminFiltrados,
             isDarkMode, toggleDarkMode, filtrosGrafico, showStartModal, iniciarAnalise
         };
