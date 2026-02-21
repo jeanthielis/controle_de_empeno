@@ -85,9 +85,12 @@ createApp({
 
         let chartInstance = null;
         let trendChartInstance = null;
+        let lateralChartInstance = null; // Instância do novo gráfico
+        
         const filtrosGrafico = ref({ formato: '', data: new Date().toISOString().slice(0, 7) }); 
 
         const updateCharts = () => {
+            // --- GRÁFICO 1: Barras de Qualidade (Aprovados vs Reprovados) ---
             const ctxQuality = document.getElementById('qualityChart');
             if (ctxQuality) {
                 const [ano, mes] = filtrosGrafico.value.data.split('-');
@@ -127,19 +130,20 @@ createApp({
                 });
             }
 
+            // --- PREPARAÇÃO DADOS PARA OS GRÁFICOS DE TENDÊNCIA E CONTROLE (Últimos 20) ---
+            const ultimasInspecoes = [...cadastros.value.inspecoes]
+                .sort((a,b) => {
+                    const tA = a.dataHora?.seconds || 0;
+                    const tB = b.dataHora?.seconds || 0;
+                    return tA - tB;
+                })
+                .slice(-20);
+
+            const labelsTrend = ultimasInspecoes.map(i => i.formatoNome ? i.formatoNome : formatarData(i.dataHora));
+
+            // --- GRÁFICO 2: Tendência de Média Central ---
             const ctxTrend = document.getElementById('trendChart');
             if (ctxTrend) {
-                const ultimasInspecoes = [...cadastros.value.inspecoes]
-                    .sort((a,b) => {
-                        const tA = a.dataHora?.seconds || 0;
-                        const tB = b.dataHora?.seconds || 0;
-                        return tA - tB;
-                    })
-                    .slice(-20);
-
-                // AQUI FOI A ALTERAÇÃO: Trocado de i.lote para i.formatoNome
-                const labelsTrend = ultimasInspecoes.map(i => i.formatoNome ? i.formatoNome : formatarData(i.dataHora));
-                
                 const dataTrend = ultimasInspecoes.map(i => {
                     let sum = 0; let count = 0;
                     if(i.pecas) {
@@ -171,6 +175,123 @@ createApp({
                         }]
                     },
                     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: false } } }
+                });
+            }
+
+            // --- GRÁFICO 3 (NOVO): Controle Lateral (Min/Max/Picos) ---
+            const ctxLateral = document.getElementById('lateralChart');
+            if (ctxLateral) {
+                const dataMaxMeasured = [];
+                const dataMinMeasured = [];
+                const dataLimitMax = [];
+                const dataLimitMin = [];
+
+                ultimasInspecoes.forEach(i => {
+                    let maxVal = -9999;
+                    let minVal = 9999;
+                    let hasData = false;
+
+                    if (i.pecas) {
+                        i.pecas.forEach(p => {
+                            if (p.laterais) {
+                                Object.values(p.laterais).forEach(v => {
+                                    if (v !== null && v !== '') {
+                                        const num = parseFloat(v);
+                                        if (num > maxVal) maxVal = num;
+                                        if (num < minVal) minVal = num;
+                                        hasData = true;
+                                    }
+                                });
+                            }
+                        });
+                    }
+
+                    if (hasData) {
+                        dataMaxMeasured.push(maxVal);
+                        dataMinMeasured.push(minVal);
+                    } else {
+                        dataMaxMeasured.push(null);
+                        dataMinMeasured.push(null);
+                    }
+
+                    // Tenta pegar o limite do snapshot da inspeção
+                    const limites = i.limitesSnapshot || { latMax: 0.5, latMin: -0.5 };
+                    dataLimitMax.push(limites.latMax);
+                    dataLimitMin.push(limites.latMin);
+                });
+
+                if (lateralChartInstance) lateralChartInstance.destroy();
+
+                lateralChartInstance = new Chart(ctxLateral, {
+                    type: 'line',
+                    data: {
+                        labels: labelsTrend, 
+                        datasets: [
+                            {
+                                label: 'Limite Max',
+                                data: dataLimitMax,
+                                borderColor: 'rgba(239, 68, 68, 0.6)', // Vermelho
+                                borderDash: [5, 5], 
+                                pointRadius: 0, 
+                                borderWidth: 2,
+                                fill: false,
+                                tension: 0
+                            },
+                            {
+                                label: 'Limite Min',
+                                data: dataLimitMin,
+                                borderColor: 'rgba(239, 68, 68, 0.6)', // Vermelho
+                                borderDash: [5, 5], 
+                                pointRadius: 0,
+                                borderWidth: 2,
+                                fill: false,
+                                tension: 0
+                            },
+                            {
+                                label: 'Pico (Max Medido)',
+                                data: dataMaxMeasured,
+                                borderColor: '#3b82f6', // Azul
+                                backgroundColor: '#3b82f6',
+                                pointRadius: 4,
+                                borderWidth: 2,
+                                fill: false,
+                                tension: 0.3
+                            },
+                            {
+                                label: 'Vale (Min Medido)',
+                                data: dataMinMeasured,
+                                borderColor: '#f59e0b', // Laranja
+                                backgroundColor: '#f59e0b',
+                                pointRadius: 4,
+                                borderWidth: 2,
+                                fill: false,
+                                tension: 0.3
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        plugins: {
+                            legend: { position: 'bottom' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': ' + context.parsed.y.toFixed(2);
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                title: { display: true, text: 'Medição Lateral' }
+                            }
+                        }
+                    }
                 });
             }
         };
