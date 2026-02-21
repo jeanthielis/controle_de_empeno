@@ -40,10 +40,8 @@ createApp({
             resultado: '' 
         });
 
-        // Nova função: Filtros Rápidos do Admin
         const setFiltroRapido = (tipo) => {
             const hoje = new Date();
-            // Ajuste de fuso horário para garantir a data local correta
             const timezoneOffset = hoje.getTimezoneOffset() * 60000;
             const dataLocal = new Date(hoje.getTime() - timezoneOffset);
             const strHoje = dataLocal.toISOString().split('T')[0];
@@ -90,7 +88,6 @@ createApp({
         const filtrosGrafico = ref({ formato: '', data: new Date().toISOString().slice(0, 7) }); 
 
         const updateCharts = () => {
-            // Gráfico 1: Barras Diárias
             const ctxQuality = document.getElementById('qualityChart');
             if (ctxQuality) {
                 const [ano, mes] = filtrosGrafico.value.data.split('-');
@@ -130,10 +127,8 @@ createApp({
                 });
             }
 
-            // Gráfico 2: Tendência de Desvio Central (Linha)
             const ctxTrend = document.getElementById('trendChart');
             if (ctxTrend) {
-                // Pega os últimos 20 lotes/inspeções chronologicamente
                 const ultimasInspecoes = [...cadastros.value.inspecoes]
                     .sort((a,b) => {
                         const tA = a.dataHora?.seconds || 0;
@@ -142,9 +137,9 @@ createApp({
                     })
                     .slice(-20);
 
-                const labelsTrend = ultimasInspecoes.map(i => i.lote ? `Lote ${i.lote}` : formatarData(i.dataHora));
+                // AQUI FOI A ALTERAÇÃO: Trocado de i.lote para i.formatoNome
+                const labelsTrend = ultimasInspecoes.map(i => i.formatoNome ? i.formatoNome : formatarData(i.dataHora));
                 
-                // Calcula a média das medições centrais de todas as peças em cada inspeção
                 const dataTrend = ultimasInspecoes.map(i => {
                     let sum = 0; let count = 0;
                     if(i.pecas) {
@@ -395,7 +390,6 @@ createApp({
             }
         };
 
-        // Nova função: Importação em Massa de CSV
         const importarProdutosCSV = (event) => {
             const file = event.target.files[0];
             if (!file) return;
@@ -416,7 +410,7 @@ createApp({
                     }
                 }
                 notify('Concluído', `${importados} novos produtos importados.`, 'sucesso');
-                event.target.value = ''; // Reseta o input
+                event.target.value = '';
             };
             reader.readAsText(file);
         };
