@@ -7,33 +7,21 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = {
-            darkMode: 'class', 
-            theme: { extend: { colors: { slate: { 950: '#020617' } } } }
-        }
+        tailwind.config = { darkMode: 'class', theme: { extend: { colors: { slate: { 950: '#020617' } } } } }
     </script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script type="importmap">
-        {
-          "imports": {
-            "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.js",
-            "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
-            "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js"
-          }
-        }
+        { "imports": { "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.js", "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js", "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js" } }
     </script>
     <link rel="stylesheet" href="style.css">
-    
     <style>
-        body, div, nav, aside, input, select, button, table, tr, td, th {
-            transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
-        }
+        [v-cloak] { display: none !important; }
+        body, div, nav, aside, input, select, button, table, tr, td, th { transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease; }
         .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
-        
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
@@ -43,22 +31,25 @@
 </head>
 <body class="bg-gray-50 text-gray-800 dark:bg-slate-950 dark:text-slate-100 font-sans antialiased overflow-hidden">
 
+    <div id="initial-loader" class="fixed inset-0 z-[99999] flex items-center justify-center bg-gray-50 dark:bg-slate-950 transition-opacity duration-500">
+        <div class="flex flex-col items-center">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400 mb-4 animate-bounce">
+                <i class="ph-fill ph-hexagon text-4xl animate-spin"></i>
+            </div>
+            <h2 class="text-2xl font-bold dark:text-white tracking-wide">Empeno Pro</h2>
+            <p class="text-sm text-gray-500 mt-2 font-medium">Carregando sistema...</p>
+        </div>
+    </div>
+
     <div id="app" v-cloak class="h-screen flex flex-col relative">
-        
         <button @click="toggleDarkMode" class="fixed top-4 right-4 z-[100] p-2 rounded-full bg-white dark:bg-slate-800 shadow-md border dark:border-slate-700 text-gray-600 dark:text-yellow-400 hover:scale-110 transition-transform no-print">
-            <i v-if="isDarkMode" class="ph-fill ph-sun text-xl"></i>
-            <i v-else class="ph-fill ph-moon text-xl text-blue-600"></i>
+            <i v-if="isDarkMode" class="ph-fill ph-sun text-xl"></i><i v-else class="ph-fill ph-moon text-xl text-blue-600"></i>
         </button>
 
         <div class="fixed top-16 right-4 z-[9999] flex flex-col gap-2 w-full max-w-sm pointer-events-none no-print">
             <transition-group name="toast">
-                <div v-for="notif in notificacoes" :key="notif.id" 
-                     :class="['pointer-events-auto p-4 rounded-xl shadow-xl border flex items-center gap-3 transform transition-all duration-300', 
-                              isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white',
-                              notif.tipo === 'sucesso' ? 'text-green-600 dark:text-green-400 border-green-500' : 
-                              notif.tipo === 'erro' ? 'text-red-500 dark:text-red-400 border-red-500' : 'text-blue-500 dark:text-blue-400 border-blue-500']">
-                    <i class="ph-fill ph-info text-2xl"></i>
-                    <div><h4 class="font-bold text-sm">{{ notif.titulo }}</h4><p class="text-xs opacity-90">{{ notif.mensagem }}</p></div>
+                <div v-for="notif in notificacoes" :key="notif.id" :class="['pointer-events-auto p-4 rounded-xl shadow-xl border flex items-center gap-3 transform transition-all duration-300', isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white', notif.tipo === 'sucesso' ? 'text-green-600 dark:text-green-400 border-green-500' : notif.tipo === 'erro' ? 'text-red-500 dark:text-red-400 border-red-500' : 'text-blue-500 dark:text-blue-400 border-blue-500']">
+                    <i class="ph-fill ph-info text-2xl"></i><div><h4 class="font-bold text-sm">{{ notif.titulo }}</h4><p class="text-xs opacity-90">{{ notif.mensagem }}</p></div>
                 </div>
             </transition-group>
         </div>
@@ -66,37 +57,21 @@
         <div v-if="currentView === 'login'" class="flex-1 flex items-center justify-center px-4">
             <div class="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100 dark:border-slate-800">
                 <div class="text-center mb-6">
-                    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300 mb-4">
-                        <i class="ph ph-hexagon text-2xl"></i>
-                    </div>
+                    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300 mb-4"><i class="ph ph-hexagon text-2xl"></i></div>
                     <h1 class="text-2xl font-bold">QualityControl</h1>
                     <p class="text-xs text-gray-500 dark:text-gray-400">Sistema de Gestão de Qualidade</p>
                 </div>
                 <form @submit.prevent="handleLogin" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Usuário</label>
-                        <input type="text" v-model="loginData.user" @input="loginData.user = loginData.user.toLowerCase()" class="input-clean lowercase w-full" placeholder="nome.sobrenome">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Senha</label>
-                        <input type="password" v-model="loginData.pass" class="input-clean w-full" placeholder="••••••••">
-                    </div>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" v-model="loginData.remember" class="w-4 h-4 text-blue-600 rounded dark:bg-slate-950 dark:border-slate-700">
-                        <span class="text-sm text-gray-600 dark:text-gray-300">Manter conectado</span>
-                    </label>
-                    <button type="submit" class="btn-primary w-full py-3">
-                        <span v-if="loading">Acessando...</span>
-                        <span v-else>Entrar</span>
-                    </button>
+                    <div><label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Usuário</label><input type="text" v-model="loginData.user" @input="loginData.user = loginData.user.toLowerCase()" class="input-clean lowercase w-full" placeholder="nome.sobrenome"></div>
+                    <div><label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Senha (Matrícula)</label><input type="password" v-model="loginData.pass" class="input-clean w-full" placeholder="••••••••"></div>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" v-model="loginData.remember" class="w-4 h-4 text-blue-600 rounded dark:bg-slate-950 dark:border-slate-700"><span class="text-sm text-gray-600 dark:text-gray-300">Manter conectado</span></label>
+                    <button type="submit" class="btn-primary w-full py-3"><span v-if="loading">Acessando...</span><span v-else>Entrar</span></button>
                 </form>
             </div>
         </div>
 
         <div v-else-if="currentView === 'admin'" class="flex h-screen overflow-hidden relative">
-            <transition name="fade">
-                <div v-if="mobileMenuOpen" @click="mobileMenuOpen = false" class="fixed inset-0 bg-black/60 z-20 md:hidden backdrop-blur-sm"></div>
-            </transition>
+            <transition name="fade"><div v-if="mobileMenuOpen" @click="mobileMenuOpen = false" class="fixed inset-0 bg-black/60 z-20 md:hidden backdrop-blur-sm"></div></transition>
 
             <aside :class="['fixed md:static inset-y-0 left-0 z-30 w-64 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 flex flex-col transition-transform duration-300 ease-in-out transform', mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
                 <div class="p-6 border-b border-gray-100 dark:border-slate-800 font-bold text-lg text-blue-600 dark:text-blue-400 flex items-center justify-between">
@@ -105,47 +80,34 @@
                 </div>
                 <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
                     <button @click="navigateAdmin('dashboard')" :class="['nav-item', adminTab === 'dashboard' ? 'active' : '']"><i class="ph ph-chart-pie-slice"></i> Dashboard</button>
-                    <button @click="navigateAdmin('usuarios')" :class="['nav-item', adminTab === 'usuarios' ? 'active' : '']"><i class="ph ph-users"></i> Usuários</button>
-                    <button @click="navigateAdmin('formatos')" :class="['nav-item', adminTab === 'formatos' ? 'active' : '']"><i class="ph ph-ruler"></i> Formatos</button>
-                    <button @click="navigateAdmin('cadastros')" :class="['nav-item', adminTab === 'cadastros' ? 'active' : '']"><i class="ph ph-package"></i> Produtos/Linhas</button>
+                    <button v-if="loginData.perfil !== 'analista'" @click="navigateAdmin('usuarios')" :class="['nav-item', adminTab === 'usuarios' ? 'active' : '']"><i class="ph ph-users"></i> Usuários</button>
+                    <button v-if="loginData.perfil !== 'analista'" @click="navigateAdmin('formatos')" :class="['nav-item', adminTab === 'formatos' ? 'active' : '']"><i class="ph ph-ruler"></i> Formatos</button>
+                    <button v-if="loginData.perfil !== 'analista'" @click="navigateAdmin('cadastros')" :class="['nav-item', adminTab === 'cadastros' ? 'active' : '']"><i class="ph ph-package"></i> Produtos/Linhas</button>
+                    
+                    <div v-if="loginData.perfil === 'admin'" class="my-4 border-t border-gray-100 dark:border-slate-800 pt-4">
+                        <button @click="irParaInspecao" class="nav-item text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"><i class="ph ph-clipboard-text"></i> Fazer Análise</button>
+                    </div>
                 </nav>
-                <div class="p-4 border-t border-gray-100 dark:border-slate-800">
-                    <button @click="logout" class="nav-item text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"><i class="ph ph-sign-out"></i> Sair</button>
-                </div>
+                <div class="p-4 border-t border-gray-100 dark:border-slate-800"><button @click="logout" class="nav-item text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"><i class="ph ph-sign-out"></i> Sair</button></div>
             </aside>
-<main class="flex-1 overflow-y-auto bg-gray-50 dark:bg-slate-950 p-6 w-full">
-                
+
+            <main class="flex-1 overflow-y-auto bg-gray-50 dark:bg-slate-950 p-6 w-full">
                 <div class="md:hidden flex items-center gap-4 mb-6">
-                    <button @click="mobileMenuOpen = true" class="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-200">
-                        <i class="ph ph-list text-2xl"></i>
-                    </button>
-                    <h1 class="font-bold text-lg text-gray-800 dark:text-white">Painel Admin</h1>
+                    <button @click="mobileMenuOpen = true" class="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-200"><i class="ph ph-list text-2xl"></i></button>
+                    <h1 class="font-bold text-lg text-gray-800 dark:text-white">Painel Gestão</h1>
                 </div>
 
                 <div v-if="adminTab === 'dashboard'">
                     <h2 class="text-2xl font-bold mb-6 hidden md:block">Dashboard</h2>
                     
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                        <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border dark:border-slate-800 shadow-sm">
-                            <div class="text-gray-400 text-xs font-bold uppercase mb-1">Total Inspeções</div>
-                            <div class="text-3xl font-bold dark:text-white">{{ stats.total }}</div>
-                        </div>
-                        <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border dark:border-slate-800 shadow-sm">
-                            <div class="text-gray-400 text-xs font-bold uppercase mb-1">Pós Folga</div>
-                            <div class="text-3xl font-bold text-blue-600 dark:text-blue-400">{{ stats.posFolga }}</div>
-                        </div>
-                        <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border dark:border-slate-800 shadow-sm">
-                            <div class="text-gray-400 text-xs font-bold uppercase mb-1">Reprovados</div>
-                            <div class="text-3xl font-bold text-red-600 dark:text-red-400">{{ stats.reprovados }}</div>
-                        </div>
-                        <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border dark:border-slate-800 shadow-sm">
-                            <div class="text-gray-400 text-xs font-bold uppercase mb-1">Hoje</div>
-                            <div class="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{{ stats.hoje }}</div>
-                        </div>
+                        <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border dark:border-slate-800 shadow-sm"><div class="text-gray-400 text-xs font-bold uppercase mb-1">Total Inspeções</div><div class="text-3xl font-bold dark:text-white">{{ stats.total }}</div></div>
+                        <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border dark:border-slate-800 shadow-sm"><div class="text-gray-400 text-xs font-bold uppercase mb-1">Pós Folga</div><div class="text-3xl font-bold text-blue-600 dark:text-blue-400">{{ stats.posFolga }}</div></div>
+                        <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border dark:border-slate-800 shadow-sm"><div class="text-gray-400 text-xs font-bold uppercase mb-1">Reprovados</div><div class="text-3xl font-bold text-red-600 dark:text-red-400">{{ stats.reprovados }}</div></div>
+                        <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border dark:border-slate-800 shadow-sm"><div class="text-gray-400 text-xs font-bold uppercase mb-1">Hoje</div><div class="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{{ stats.hoje }}</div></div>
                     </div>
 
                     <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden mb-8">
-                        
                         <div class="p-4 border-b bg-gray-50 dark:bg-slate-900 dark:border-slate-800">
                             <div class="flex flex-wrap gap-2 mb-4 pb-4 border-b border-gray-200 dark:border-slate-800">
                                 <span class="text-xs font-bold text-gray-400 uppercase flex items-center mr-2"><i class="ph-bold ph-lightning mr-1 text-yellow-500"></i> Atalhos:</span>
@@ -153,20 +115,19 @@
                                 <button @click="setFiltroRapido('reprovados_hoje')" class="text-xs bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 font-bold transition">Reprovados Hoje</button>
                                 <button @click="setFiltroRapido('mes')" class="text-xs bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 px-3 py-1.5 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/50 font-bold transition">Este Mês</button>
                             </div>
-
                             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 font-bold text-gray-700 dark:text-gray-200">
-                                <span>Histórico de Inspeções</span>
+                                <div class="flex items-center gap-3">
+                                    <span>Histórico de Inspeções</span>
+                                    <button @click.prevent="exportarCSV" class="text-[10px] md:text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 px-3 py-1.5 rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-900/50 font-bold cursor-pointer flex items-center gap-1 transition-colors relative z-50"><i class="ph-bold ph-download-simple"></i> Exportar CSV</button>
+                                </div>
                                 <div class="flex flex-wrap gap-2 w-full md:w-auto">
                                     <input v-model="filtros.lote" placeholder="Lote" class="input-clean py-1.5 text-xs w-20">
                                     <input v-model="filtros.produto" placeholder="Produto" class="input-clean py-1.5 text-xs flex-1 md:w-32">
+                                    <select v-model="filtros.formatoId" class="input-clean py-1.5 text-xs w-28"><option value="">Formato: Todos</option><option v-for="fmt in cadastros.formatos" :value="fmt.id">{{ fmt.nome }}</option></select>
                                     <input type="date" v-model="filtros.dataInicio" class="input-clean py-1.5 text-xs w-28" placeholder="Início">
                                     <input type="date" v-model="filtros.dataFim" class="input-clean py-1.5 text-xs w-28" placeholder="Fim">
-                                    <select v-model="filtros.posFolga" class="input-clean py-1.5 text-xs w-24">
-                                        <option value="">PosFolga: Todos</option><option value="Sim">Sim</option><option value="Não">Não</option>
-                                    </select>
-                                    <select v-model="filtros.resultado" class="input-clean py-1.5 text-xs w-24">
-                                        <option value="">Status: Todos</option><option value="Aprovado">Aprovado</option><option value="Reprovado">Reprovado</option>
-                                    </select>
+                                    <select v-model="filtros.posFolga" class="input-clean py-1.5 text-xs w-24"><option value="">PosFolga: Todos</option><option value="Sim">Sim</option><option value="Não">Não</option></select>
+                                    <select v-model="filtros.resultado" class="input-clean py-1.5 text-xs w-24"><option value="">Status: Todos</option><option value="Aprovado">Aprovado</option><option value="Reprovado">Reprovado</option></select>
                                     <button @click="limparFiltros" class="text-xs text-red-500 hover:underline">Limpar</button>
                                 </div>
                             </div>
@@ -175,21 +136,19 @@
                         <div class="md:hidden divide-y divide-gray-100 dark:divide-slate-800">
                             <div v-for="rel in relatoriosFiltrados" :key="rel.id" class="p-4 hover:bg-gray-50 dark:hover:bg-slate-800 transition">
                                 <div class="flex justify-between items-start mb-2">
-                                    <div>
-                                        <div class="text-sm font-bold text-gray-800 dark:text-white">{{ rel.produto }}</div>
-                                        <div class="text-xs text-gray-500 dark:text-gray-400">Lote: {{ rel.lote }}</div>
-                                    </div>
+                                    <div><div class="text-sm font-bold text-gray-800 dark:text-white">{{ rel.produto }}</div><div class="text-xs text-gray-500 dark:text-gray-400">Lote: {{ rel.lote }} | Fmt: {{ rel.formatoNome }}</div></div>
                                     <span v-if="rel.resultado === 'Aprovado'" class="text-[10px] bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 px-2 py-1 rounded-full font-bold">OK</span>
                                     <span v-else class="text-[10px] bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 px-2 py-1 rounded-full font-bold">FORA</span>
                                 </div>
-                                <div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400 mb-3">
-                                    <div class="flex items-center gap-2"><i class="ph ph-user"></i> {{ rel.inspetor }}</div>
-                                    <div class="flex items-center gap-2"><i class="ph ph-calendar"></i> {{ formatarData(rel.dataHora) }}</div>
+                                <div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                    <div class="flex items-center gap-2"><i class="ph ph-user"></i> {{ rel.inspetor }}</div><div class="flex items-center gap-2"><i class="ph ph-calendar"></i> {{ formatarData(rel.dataHora) }}</div>
                                 </div>
-                                <div v-if="rel.posFolga === 'Sim'" class="mb-3">
-                                    <span class="text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-1.5 py-0.5 rounded font-bold uppercase">Pós Folga</span>
+                                <div v-if="rel.posFolga === 'Sim'" class="mb-2"><span class="text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-1.5 py-0.5 rounded font-bold uppercase">Pós Folga</span></div>
+                                <div class="grid grid-cols-2 gap-2 mt-2 bg-gray-50 dark:bg-slate-950/50 border dark:border-slate-800 p-2 rounded-lg text-[10px] font-bold mb-3">
+                                    <div class="text-orange-600 dark:text-orange-400">LAT: {{ getExtremos(rel.pecas).lat }}</div>
+                                    <div class="text-emerald-600 dark:text-emerald-400">CENT: {{ getExtremos(rel.pecas).cent }}</div>
                                 </div>
-                                <div class="flex gap-2">
+                                <div class="flex gap-2" v-if="loginData.perfil !== 'analista'">
                                     <button @click="abrirDetalhesRelatorio(rel)" class="flex-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 py-2 rounded-lg text-xs font-bold hover:bg-blue-100 flex justify-center items-center gap-1"><i class="ph-bold ph-pencil-simple"></i> Editar</button>
                                     <button @click="removerInspecao(rel.id)" class="px-3 bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 rounded-lg text-xs hover:bg-red-100"><i class="ph-bold ph-trash"></i></button>
                                 </div>
@@ -201,26 +160,22 @@
                             <table class="w-full text-left text-sm whitespace-nowrap">
                                 <thead class="bg-gray-50 dark:bg-slate-950 border-b border-gray-200 dark:border-slate-800 text-gray-500">
                                     <tr>
-                                        <th class="p-4">Data</th>
-                                        <th class="p-4">Status</th>
-                                        <th class="p-4">Inspetor</th>
-                                        <th class="p-4">Produto</th>
-                                        <th class="p-4 text-right">Ação</th>
+                                        <th class="p-4">Data</th><th class="p-4">Status</th><th class="p-4">Inspetor</th><th class="p-4">Produto / Formato</th>
+                                        <th class="p-4">Medições (Mín / Máx)</th>
+                                        <th v-if="loginData.perfil !== 'analista'" class="p-4 text-right">Ação</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100 dark:divide-slate-800">
                                     <tr v-for="rel in relatoriosFiltrados" :key="rel.id" class="hover:bg-blue-50 dark:hover:bg-blue-900/10 transition">
-                                        <td class="p-4 text-gray-700 dark:text-gray-300">
-                                            {{ formatarData(rel.dataHora) }}
-                                            <div v-if="rel.posFolga === 'Sim'" class="mt-1"><span class="bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase">Pós Folga</span></div>
-                                        </td>
-                                        <td class="p-4">
-                                            <span v-if="rel.resultado === 'Aprovado'" class="text-green-600 dark:text-green-400 font-bold bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded text-xs">APROVADO</span>
-                                            <span v-else class="text-red-600 dark:text-red-400 font-bold bg-red-100 dark:bg-red-900/30 px-2 py-1 rounded text-xs">REPROVADO</span>
-                                        </td>
+                                        <td class="p-4 text-gray-700 dark:text-gray-300">{{ formatarData(rel.dataHora) }} <div v-if="rel.posFolga === 'Sim'" class="mt-1"><span class="bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase">Pós Folga</span></div></td>
+                                        <td class="p-4"><span v-if="rel.resultado === 'Aprovado'" class="text-green-600 dark:text-green-400 font-bold bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded text-xs">APROVADO</span><span v-else class="text-red-600 dark:text-red-400 font-bold bg-red-100 dark:bg-red-900/30 px-2 py-1 rounded text-xs">REPROVADO</span></td>
                                         <td class="p-4 font-bold text-gray-700 dark:text-gray-300">{{ rel.inspetor }}</td>
-                                        <td class="p-4 text-xs text-gray-500 dark:text-gray-400">{{ rel.produto }} <br> Lote: {{ rel.lote }}</td>
-                                        <td class="p-4 text-right">
+                                        <td class="p-4 text-xs text-gray-500 dark:text-gray-400"><span class="font-bold text-gray-700 dark:text-gray-300 text-sm">{{ rel.produto }}</span><br>Fmt: {{ rel.formatoNome }} | Lote: {{ rel.lote }}</td>
+                                        <td class="p-4 text-[11px] font-mono leading-tight">
+                                            <div class="text-orange-600 dark:text-orange-400"><span class="font-bold">LAT:</span> {{ getExtremos(rel.pecas).lat }}</div>
+                                            <div class="text-emerald-600 dark:text-emerald-400"><span class="font-bold">CENT:</span> {{ getExtremos(rel.pecas).cent }}</div>
+                                        </td>
+                                        <td v-if="loginData.perfil !== 'analista'" class="p-4 text-right">
                                             <div class="flex justify-end gap-3">
                                                 <button @click="abrirDetalhesRelatorio(rel)" class="text-blue-500 hover:text-blue-700 dark:text-blue-400 transition-transform hover:scale-110"><i class="ph ph-pencil-simple text-xl"></i></button>
                                                 <button @click="removerInspecao(rel.id)" class="text-red-400 hover:text-red-600 transition-transform hover:scale-110"><i class="ph ph-trash text-xl"></i></button>
@@ -232,62 +187,27 @@
                         </div>
                     </div>
 
+                    <div class="mt-8 mb-6">
+                        <div class="flex border-b border-gray-200 dark:border-slate-800">
+                            <button @click="tipoGrafico = 'fechamento96'" :class="tipoGrafico === 'fechamento96' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700'" class="px-6 py-3 border-b-2 font-bold text-sm transition-colors flex items-center gap-2"><i class="ph-fill ph-chart-line-up text-lg"></i> Fechamento 96 (Normal)</button>
+                            <button @click="tipoGrafico = 'pos_folga'" :class="tipoGrafico === 'pos_folga' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 hover:text-gray-700'" class="px-6 py-3 border-b-2 font-bold text-sm transition-colors flex items-center gap-2"><i class="ph-fill ph-wrench text-lg"></i> Pós Folga</button>
+                        </div>
+                    </div>
+
                     <div class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
-                        <div class="font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2">
-                            <i class="ph-fill ph-funnel text-blue-500"></i> Filtro Geral para Gráficos
-                        </div>
-                        <div class="flex gap-2 w-full md:w-auto">
-                            <select v-model="filtrosGrafico.formato" class="input-clean text-sm py-2 w-full md:w-48 bg-blue-50 border-blue-200 text-blue-800 font-bold dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300">
-                                <option value="">Todos os Formatos</option>
-                                <option v-for="fmt in cadastros.formatos" :value="fmt.id">{{ fmt.nome }}</option>
-                            </select>
-                            <input type="month" v-model="filtrosGrafico.data" class="input-clean text-sm py-2 w-full md:w-40">
-                        </div>
+                        <div class="font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2"><i class="ph-fill ph-funnel text-blue-500"></i> Filtro Geral para Gráficos</div>
+                        <div class="flex gap-2 w-full md:w-auto"><select v-model="filtrosGrafico.formato" class="input-clean text-sm py-2 w-full md:w-48 bg-blue-50 border-blue-200 text-blue-800 font-bold dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300"><option value="">Todos os Formatos</option><option v-for="fmt in cadastros.formatos" :value="fmt.id">{{ fmt.nome }}</option></select><input type="month" v-model="filtrosGrafico.data" class="input-clean text-sm py-2 w-full md:w-40"></div>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 p-4">
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="font-bold dark:text-white flex items-center gap-2"><i class="ph-fill ph-chart-bar text-blue-500"></i> Análise Diária</h3>
-                            </div>
-                            <div class="relative h-64 w-full">
-                                <canvas id="qualityChart"></canvas>
-                            </div>
-                        </div>
-
-                        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 p-4">
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="font-bold dark:text-white flex items-center gap-2"><i class="ph-fill ph-trend-up text-purple-500"></i> Média de Desvio Central</h3>
-                                <span class="text-xs font-bold text-gray-500 bg-gray-100 dark:bg-slate-800 px-2 py-1 rounded">Últimos 20</span>
-                            </div>
-                            <div class="relative h-64 w-full">
-                                <canvas id="trendChart"></canvas>
-                            </div>
-                        </div>
+                        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 p-4"><div class="flex justify-between items-center mb-4"><h3 class="font-bold dark:text-white flex items-center gap-2"><i class="ph-fill ph-chart-bar text-blue-500"></i> Análise Diária</h3></div><div class="relative h-64 w-full"><canvas id="qualityChart"></canvas></div></div>
+                        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 p-4"><div class="flex justify-between items-center mb-4"><h3 class="font-bold dark:text-white flex items-center gap-2"><i class="ph-fill ph-trend-up text-purple-500"></i> Média de Desvio Central</h3><span class="text-xs font-bold text-gray-500 bg-gray-100 dark:bg-slate-800 px-2 py-1 rounded">Últimos 20</span></div><div class="relative h-64 w-full"><canvas id="trendChart"></canvas></div></div>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 p-4">
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="font-bold dark:text-white flex items-center gap-2"><i class="ph-fill ph-arrows-out-line-horizontal text-orange-500"></i> Range Lateral (Picos e Vales)</h3>
-                                <span class="text-[10px] font-bold text-gray-500 bg-gray-100 dark:bg-slate-800 px-2 py-1 rounded">Últimos 20</span>
-                            </div>
-                            <div class="relative h-72 w-full">
-                                <canvas id="lateralChart"></canvas>
-                            </div>
-                        </div>
-
-                        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 p-4">
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="font-bold dark:text-white flex items-center gap-2"><i class="ph-fill ph-arrows-in-line-horizontal text-emerald-500"></i> Range Central (Picos e Vales)</h3>
-                                <span class="text-[10px] font-bold text-gray-500 bg-gray-100 dark:bg-slate-800 px-2 py-1 rounded">Últimos 20</span>
-                            </div>
-                            <div class="relative h-72 w-full">
-                                <canvas id="centralChart"></canvas>
-                            </div>
-                        </div>
+                        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 p-4"><div class="flex justify-between items-center mb-4"><h3 class="font-bold dark:text-white flex items-center gap-2"><i class="ph-fill ph-arrows-out-line-horizontal text-orange-500"></i> Range Lateral (Picos e Vales)</h3><span class="text-[10px] font-bold text-gray-500 bg-gray-100 dark:bg-slate-800 px-2 py-1 rounded">Últimos 20</span></div><div class="relative h-72 w-full"><canvas id="lateralChart"></canvas></div></div>
+                        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 p-4"><div class="flex justify-between items-center mb-4"><h3 class="font-bold dark:text-white flex items-center gap-2"><i class="ph-fill ph-arrows-in-line-horizontal text-emerald-500"></i> Range Central (Picos e Vales)</h3><span class="text-[10px] font-bold text-gray-500 bg-gray-100 dark:bg-slate-800 px-2 py-1 rounded">Últimos 20</span></div><div class="relative h-72 w-full"><canvas id="centralChart"></canvas></div></div>
                     </div>
-
                 </div>
 
                 <div v-if="adminTab === 'usuarios'">
@@ -295,13 +215,24 @@
                     <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border dark:border-slate-800 shadow-sm mb-8">
                         <h3 class="font-bold mb-4 text-blue-600 dark:text-blue-400">Novo Cadastro</h3>
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                            <div><label class="block text-xs font-bold text-gray-400 uppercase mb-1">Nome Completo</label><input v-model="novoUsuarioForm.nome" class="input-clean w-full" placeholder="Ex: Jean Carlos"></div>
+                            <div><label class="block text-xs font-bold text-gray-400 uppercase mb-1">Nome Completo</label><input v-model="novoUsuarioForm.nome" class="input-clean w-full" placeholder="Ex: Jean Braga"></div>
                             <div><label class="block text-xs font-bold text-gray-400 uppercase mb-1">Matrícula</label><input v-model="novoUsuarioForm.matricula" class="input-clean w-full" placeholder="Ex: 12345"></div>
-                            <div><label class="flex items-center gap-2 cursor-pointer bg-gray-50 dark:bg-slate-950 p-2.5 rounded-lg border border-gray-200 dark:border-slate-800 hover:bg-gray-100 dark:hover:bg-slate-800"><input type="checkbox" v-model="novoUsuarioForm.admin" class="w-4 h-4 text-blue-600 rounded dark:bg-slate-700 dark:border-slate-600"><span class="text-sm font-bold text-gray-600 dark:text-gray-300">Admin?</span></label></div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Perfil de Acesso</label>
+                                <select v-model="novoUsuarioForm.perfil" class="input-clean w-full font-bold text-blue-600 dark:text-blue-400 border-blue-200 bg-blue-50 dark:bg-blue-900/20">
+                                    <option value="inspetor">Inspetor de Linha</option>
+                                    <option value="analista">Analista (Ler Dashboard)</option>
+                                    <option value="admin">Administrador Geral</option>
+                                </select>
+                            </div>
                             <button @click="cadastrarUsuario" class="btn-primary w-full h-[42px]">Cadastrar</button>
                         </div>
                     </div>
-                    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border dark:border-slate-800 p-4"><div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead><tr class="text-gray-500 border-b dark:border-slate-800"><th class="pb-2">Nome</th><th class="pb-2">Login</th><th class="pb-2">Acesso</th><th class="pb-2 text-right">Ação</th></tr></thead><tbody><tr v-for="u in cadastros.usuarios" :key="u.id" class="border-b dark:border-slate-800 last:border-0 hover:bg-gray-50 dark:hover:bg-slate-800"><td class="py-3 font-bold text-gray-700 dark:text-gray-300">{{ u.nome }}</td><td class="py-3 font-mono text-blue-600 dark:text-blue-400">{{ u.login }}</td><td class="py-3"><span :class="u.admin ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'" class="px-2 py-1 rounded text-xs font-bold">{{ u.admin ? 'ADMIN' : 'INSPETOR' }}</span></td><td class="py-3 text-right"><button @click="removerItem('usuarios', u.id)" class="text-red-400 hover:text-red-600"><i class="ph ph-trash"></i></button></td></tr></tbody></table></div></div>
+                    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border dark:border-slate-800 p-4"><div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead><tr class="text-gray-500 border-b dark:border-slate-800"><th class="pb-2">Nome</th><th class="pb-2">Login</th><th class="pb-2">Perfil</th><th class="pb-2 text-right">Ação</th></tr></thead><tbody><tr v-for="u in cadastros.usuarios" :key="u.id" class="border-b dark:border-slate-800 last:border-0 hover:bg-gray-50 dark:hover:bg-slate-800"><td class="py-3 font-bold text-gray-700 dark:text-gray-300">{{ u.nome }}</td><td class="py-3 font-mono text-blue-600 dark:text-blue-400">{{ u.login }}</td><td class="py-3">
+                                <span :class="{'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300': u.perfil === 'admin' || u.admin, 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300': u.perfil === 'analista', 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300': (!u.perfil || u.perfil === 'inspetor') && !u.admin}" class="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">
+                                    {{ u.perfil ? u.perfil : (u.admin ? 'admin' : 'inspetor') }}
+                                </span>
+                            </td><td class="py-3 text-right"><button @click="removerItem('usuarios', u.id)" class="text-red-400 hover:text-red-600"><i class="ph ph-trash"></i></button></td></tr></tbody></table></div></div>
                 </div>
 
                 <div v-if="adminTab === 'formatos'">
@@ -313,64 +244,42 @@
                     <h2 class="text-2xl font-bold mb-6 hidden md:block">Cadastros Básicos</h2>
                     <div class="grid md:grid-cols-2 gap-8">
                         <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-800 flex flex-col h-[500px]">
-                            
                             <div class="p-5 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-900 rounded-t-2xl">
                                 <h3 class="font-bold flex items-center gap-2"><i class="ph-fill ph-package text-blue-500"></i> Produtos</h3>
-                                
                                 <div class="flex gap-2">
                                     <label class="text-[10px] md:text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-3 py-1.5 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-900/50 font-bold cursor-pointer flex items-center gap-1 transition-colors">
-                                        <i class="ph-bold ph-upload-simple"></i> <span class="hidden md:inline">Importar CSV</span>
-                                        <input type="file" accept=".csv, .txt" class="hidden" @change="importarProdutosCSV">
+                                        <i class="ph-bold ph-upload-simple"></i> <span class="hidden md:inline">Importar CSV</span><input type="file" accept=".csv, .txt" class="hidden" @change="importarProdutosCSV">
                                     </label>
                                     <button @click="novoItemSimples('produtos')" class="text-[10px] md:text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 font-bold shadow-sm transition-colors">+ Adicionar</button>
                                 </div>
                             </div>
-                            
-                            <div class="p-4 border-b border-gray-100 dark:border-slate-800">
-                                <input v-model="filtroAdminProdutos" placeholder="Buscar Produto..." class="input-clean pl-9 bg-[url('https://unpkg.com/@phosphor-icons/web/src/regular/magnifying-glass.svg')] bg-no-repeat bg-[10px_center]">
-                            </div>
-                            <div class="overflow-y-auto flex-1 p-2">
-                                <div v-for="p in produtosAdminFiltrados" :key="p.id" class="group flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg transition-colors border-b border-gray-50 dark:border-slate-800 last:border-0">
-                                    <input v-model="p.nome" @change="atualizarItemSimples('produtos', p)" class="bg-transparent outline-none w-full text-sm font-medium focus:text-blue-600 text-gray-700 dark:text-gray-300">
-                                    <button @click="removerItem('produtos', p.id)" class="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-opacity p-2"><i class="ph-bold ph-trash"></i></button>
-                                </div>
-                            </div>
+                            <div class="p-4 border-b border-gray-100 dark:border-slate-800"><input v-model="filtroAdminProdutos" placeholder="Buscar Produto..." class="input-clean pl-9 bg-[url('https://unpkg.com/@phosphor-icons/web/src/regular/magnifying-glass.svg')] bg-no-repeat bg-[10px_center]"></div>
+                            <div class="overflow-y-auto flex-1 p-2"><div v-for="p in produtosAdminFiltrados" :key="p.id" class="group flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg transition-colors border-b border-gray-50 dark:border-slate-800 last:border-0"><input v-model="p.nome" @change="atualizarItemSimples('produtos', p)" class="bg-transparent outline-none w-full text-sm font-medium focus:text-blue-600 text-gray-700 dark:text-gray-300"><button @click="removerItem('produtos', p.id)" class="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-opacity p-2"><i class="ph-bold ph-trash"></i></button></div></div>
                         </div>
-
                         <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-800 flex flex-col h-[500px]">
-                            <div class="p-5 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-900 rounded-t-2xl">
-                                <h3 class="font-bold flex items-center gap-2"><i class="ph-fill ph-factory text-emerald-500"></i> Linhas</h3>
-                                <button @click="novoItemSimples('linhas')" class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-700 font-bold">+ Adicionar</button>
-                            </div>
-                            <div class="overflow-y-auto flex-1 p-2">
-                                <div v-for="l in cadastros.linhas" :key="l.id" class="group flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg transition-colors border-b border-gray-50 dark:border-slate-800 last:border-0">
-                                    <input v-model="l.nome" @change="atualizarItemSimples('linhas', l)" class="bg-transparent outline-none w-full text-sm font-medium focus:text-emerald-600 text-gray-700 dark:text-gray-300">
-                                    <button @click="removerItem('linhas', l.id)" class="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-opacity p-2"><i class="ph-bold ph-trash"></i></button>
-                                </div>
-                            </div>
+                            <div class="p-5 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-900 rounded-t-2xl"><h3 class="font-bold flex items-center gap-2"><i class="ph-fill ph-factory text-emerald-500"></i> Linhas</h3><button @click="novoItemSimples('linhas')" class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-700 font-bold">+ Adicionar</button></div>
+                            <div class="overflow-y-auto flex-1 p-2"><div v-for="l in cadastros.linhas" :key="l.id" class="group flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg transition-colors border-b border-gray-50 dark:border-slate-800 last:border-0"><input v-model="l.nome" @change="atualizarItemSimples('linhas', l)" class="bg-transparent outline-none w-full text-sm font-medium focus:text-emerald-600 text-gray-700 dark:text-gray-300"><button @click="removerItem('linhas', l.id)" class="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-opacity p-2"><i class="ph-bold ph-trash"></i></button></div></div>
                         </div>
                     </div>
                 </div>
             </main>
+
             <div v-if="relatorioSelecionado" class="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
                 <div class="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-5xl h-[90vh] flex flex-col shadow-2xl relative">
                     <div id="modal-relatorio-content" class="flex flex-col h-full bg-white dark:bg-slate-900 p-1">
-                        <div class="p-4 border-b dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-900 rounded-t-2xl" data-html2canvas-ignore>
-                            <h3 class="font-bold dark:text-white flex items-center gap-2"><i class="ph-fill ph-pencil-simple"></i> Editar Inspeção</h3>
-                            <button @click="relatorioSelecionado = null" class="text-gray-400 hover:text-gray-600"><i class="ph ph-x text-xl"></i></button>
-                        </div>
+                        <div class="p-4 border-b dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-900 rounded-t-2xl" data-html2canvas-ignore><h3 class="font-bold dark:text-white flex items-center gap-2"><i class="ph-fill ph-pencil-simple"></i> Detalhes da Inspeção</h3><button @click="relatorioSelecionado = null" class="text-gray-400 hover:text-gray-600"><i class="ph ph-x text-xl"></i></button></div>
                         <div class="p-6 overflow-y-auto flex-1 modal-scroll">
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-6 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                                <div class="dark:text-gray-300"><b>Inspetor:</b> {{ relatorioSelecionado.inspetor }}</div>
-                                <div class="dark:text-gray-300"><b>Pós Folga:</b> {{ relatorioSelecionado.posFolga }}</div>
-                                <div class="dark:text-gray-300"><b>Produto:</b> {{ relatorioSelecionado.produto }}</div>
-                                <div class="dark:text-gray-300"><b>Lote:</b> {{ relatorioSelecionado.lote }}</div>
+                                <div class="dark:text-gray-300"><b>Inspetor:</b> {{ relatorioSelecionado.inspetor }}</div><div class="dark:text-gray-300"><b>Pós Folga:</b> {{ relatorioSelecionado.posFolga }}</div><div class="dark:text-gray-300"><b>Produto:</b> {{ relatorioSelecionado.produto }}</div><div class="dark:text-gray-300"><b>Lote:</b> {{ relatorioSelecionado.lote }}</div>
                                 <div class="col-span-2 md:col-span-4 mt-2 border-t pt-2 border-blue-200 dark:border-blue-800 dark:text-gray-300"><b>Resultado:</b> <span :class="relatorioSelecionado.resultado === 'Aprovado' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400 font-bold'">{{ relatorioSelecionado.resultado }}</span></div>
                             </div>
                             <div class="flex justify-between items-center mb-2"><h4 class="font-bold dark:text-white">Medições</h4><button id="btn-print-action" @click="baixarPrintRelatorio" class="text-blue-600 dark:text-blue-400 hover:underline text-xs flex items-center gap-1" data-html2canvas-ignore><i class="ph-bold ph-image"></i> Baixar Imagem</button></div>
-                            <div class="space-y-4"><div v-for="(peca, idx) in relatorioSelecionado.pecas" class="border dark:border-slate-800 p-3 rounded-lg"><div class="font-bold text-xs text-gray-500 mb-2">PEÇA {{ idx + 1 }}</div><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><span class="text-[10px] uppercase font-bold text-gray-400">Lateral</span><div class="grid grid-cols-4 gap-2 mt-1"><div v-for="(v, k) in peca.laterais" class="relative"><input type="number" step="0.01" v-model.number="peca.laterais[k]" :class="getStatusRelatorio(relatorioSelecionado, peca.laterais[k], 'lateral') ? 'border-gray-200 dark:border-slate-700' : 'border-red-500 bg-red-50 dark:bg-red-900/20'" class="input-clean text-center font-bold h-8 text-sm w-full"><span class="absolute -top-2 left-1 text-[8px] bg-white dark:bg-slate-900 px-1 text-gray-400">{{k}}</span></div></div></div><div><span class="text-[10px] uppercase font-bold text-gray-400">Central</span><div class="grid grid-cols-2 gap-2 mt-1"><div v-for="(v, k) in peca.centrais" class="relative"><input type="number" step="0.01" v-model.number="peca.centrais[k]" :class="getStatusRelatorio(relatorioSelecionado, peca.centrais[k], 'central') ? 'border-gray-200 dark:border-slate-700' : 'border-red-500 bg-red-50 dark:bg-red-900/20'" class="input-clean text-center font-bold h-8 text-sm w-full"><span class="absolute -top-2 left-1 text-[8px] bg-white dark:bg-slate-900 px-1 text-gray-400">C{{k}}</span></div></div></div></div></div></div>
+                            <div class="space-y-4"><div v-for="(peca, idx) in relatorioSelecionado.pecas" class="border dark:border-slate-800 p-3 rounded-lg"><div class="font-bold text-xs text-gray-500 mb-2">PEÇA {{ idx + 1 }}</div><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><span class="text-[10px] uppercase font-bold text-gray-400">Lateral</span><div class="grid grid-cols-4 gap-2 mt-1"><div v-for="(v, k) in peca.laterais" class="relative"><input type="number" step="0.01" v-model.number="peca.laterais[k]" :disabled="loginData.perfil === 'analista'" :class="[getStatusRelatorio(relatorioSelecionado, peca.laterais[k], 'lateral') ? 'border-gray-200 dark:border-slate-700' : 'border-red-500 bg-red-50 dark:bg-red-900/20', loginData.perfil === 'analista' ? 'bg-gray-100 text-gray-500' : '']" class="input-clean text-center font-bold h-8 text-sm w-full"><span class="absolute -top-2 left-1 text-[8px] bg-white dark:bg-slate-900 px-1 text-gray-400">{{k}}</span></div></div></div><div><span class="text-[10px] uppercase font-bold text-gray-400">Central</span><div class="grid grid-cols-2 gap-2 mt-1"><div v-for="(v, k) in peca.centrais" class="relative"><input type="number" step="0.01" v-model.number="peca.centrais[k]" :disabled="loginData.perfil === 'analista'" :class="[getStatusRelatorio(relatorioSelecionado, peca.centrais[k], 'central') ? 'border-gray-200 dark:border-slate-700' : 'border-red-500 bg-red-50 dark:bg-red-900/20', loginData.perfil === 'analista' ? 'bg-gray-100 text-gray-500' : '']" class="input-clean text-center font-bold h-8 text-sm w-full"><span class="absolute -top-2 left-1 text-[8px] bg-white dark:bg-slate-900 px-1 text-gray-400">C{{k}}</span></div></div></div></div></div></div>
                         </div>
-                        <div class="p-4 border-t dark:border-slate-800 bg-gray-50 dark:bg-slate-950 rounded-b-2xl flex justify-end gap-3" data-html2canvas-ignore><button @click="relatorioSelecionado = null" class="btn-secondary">Cancelar</button><button @click="salvarAlteracoesAdmin" class="btn-primary">Salvar Correções</button></div>
+                        <div class="p-4 border-t dark:border-slate-800 bg-gray-50 dark:bg-slate-950 rounded-b-2xl flex justify-end gap-3" data-html2canvas-ignore>
+                            <button @click="relatorioSelecionado = null" class="btn-secondary">{{ loginData.perfil === 'analista' ? 'Fechar' : 'Cancelar' }}</button>
+                            <button v-if="loginData.perfil !== 'analista'" @click="salvarAlteracoesAdmin" class="btn-primary">Salvar Correções</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -378,80 +287,38 @@
 
         <div v-else-if="currentView === 'inspector'" class="flex flex-col h-screen relative">
             <header class="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 px-4 py-3 shadow-sm flex justify-between items-center z-20">
-                <div class="flex items-center gap-2 font-bold text-gray-800 dark:text-white"><i class="ph-fill ph-check-square text-blue-600 text-xl"></i> <span class="hidden sm:inline">Empeno Pro</span></div>
-                <div class="flex items-center gap-3"><div class="text-xs text-right hidden sm:block"><div class="font-bold text-gray-800 dark:text-white">{{ loginData.user }}</div><div class="text-gray-400">Inspetor</div></div><button @click="logout" class="text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full"><i class="ph ph-sign-out text-xl"></i></button></div>
+                <div class="flex items-center gap-2 font-bold text-gray-800 dark:text-white">
+                    <button v-if="loginData.perfil === 'admin'" @click="voltarAdmin" class="mr-2 text-gray-500 hover:text-blue-500 transition-colors bg-gray-100 dark:bg-slate-800 p-1.5 rounded-lg" title="Voltar ao Painel">
+                        <i class="ph-bold ph-arrow-left text-lg"></i>
+                    </button>
+                    <i class="ph-fill ph-check-square text-blue-600 text-xl"></i> <span class="hidden sm:inline">Empeno Pro</span>
+                </div>
+                <div class="flex items-center gap-3"><div class="text-xs text-right hidden sm:block"><div class="font-bold text-gray-800 dark:text-white">{{ loginData.user }}</div><div class="text-gray-400 uppercase tracking-widest text-[9px]">{{ loginData.perfil === 'admin' ? 'Administrador' : 'Inspetor' }}</div></div><button @click="logout" class="text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full"><i class="ph ph-sign-out text-xl"></i></button></div>
             </header>
 
             <div v-if="showStartModal" class="absolute inset-0 top-[60px] z-40 bg-gray-50 dark:bg-slate-950 flex flex-col p-4 overflow-y-auto">
                 <div class="m-auto w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-800 p-6 space-y-4 animate-scale-in">
-                    <div class="text-center mb-6">
-                        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300 mb-2">
-                            <i class="ph-fill ph-clipboard-text text-2xl"></i>
-                        </div>
-                        <h2 class="text-2xl font-bold dark:text-white">Nova Inspeção</h2>
-                        <p class="text-xs text-gray-500">Preencha os dados do lote para começar</p>
-                    </div>
-
+                    <div class="text-center mb-6"><div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300 mb-2"><i class="ph-fill ph-clipboard-text text-2xl"></i></div><h2 class="text-2xl font-bold dark:text-white">Nova Inspeção</h2><p class="text-xs text-gray-500">Preencha os dados do lote para começar</p></div>
                     <div class="space-y-4 text-left">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Linha</label>
-                            <select v-model="form.linha" class="input-clean w-full"><option value="">Selecione...</option><option v-for="l in cadastros.linhas" :value="l.nome">{{ l.nome }}</option></select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Formato</label>
-                            <select v-model="form.formatoId" class="input-clean w-full"><option value="">Selecione...</option><option v-for="f in cadastros.formatos" :value="f.id">{{ f.nome }}</option></select>
-                        </div>
-                        <div class="relative group">
-                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Produto</label>
-                            <input v-model="produtoSearch" @focus="mostrandoListaProdutos = true" @blur="setTimeout(() => mostrandoListaProdutos = false, 200)" placeholder="Buscar Produto..." class="input-clean w-full pl-8" :class="form.produto ? 'border-green-400 bg-green-50 dark:bg-green-900/20 dark:border-green-800 text-green-800 dark:text-green-400 font-bold' : ''"><i class="ph ph-magnifying-glass absolute left-2.5 top-[2.1rem] text-gray-400"></i>
-                            <div v-if="mostrandoListaProdutos" class="absolute top-full left-0 w-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xl rounded-lg mt-1 max-h-48 overflow-y-auto z-50"><div v-for="p in produtosFiltrados" @click="selecionarProduto(p.nome)" class="p-2.5 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer border-b border-gray-50 dark:border-slate-800 text-gray-700 dark:text-gray-300">{{ p.nome }}</div></div>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Lote</label>
-                            <input v-model="form.lote" @input="form.lote = form.lote.toUpperCase()" class="input-clean w-full uppercase font-bold" placeholder="EX: A123">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Pós Folga?</label>
-                            <select v-model="form.posFolga" class="input-clean w-full border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 font-medium text-blue-800 dark:text-blue-300"><option value="">Selecione...</option><option value="Sim">Sim</option><option value="Não">Não</option></select>
-                        </div>
+                        <div><label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Linha</label><select v-model="form.linha" class="input-clean w-full"><option value="">Selecione...</option><option v-for="l in cadastros.linhas" :value="l.nome">{{ l.nome }}</option></select></div>
+                        <div><label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Formato</label><select v-model="form.formatoId" class="input-clean w-full"><option value="">Selecione...</option><option v-for="f in cadastros.formatos" :value="f.id">{{ f.nome }}</option></select></div>
+                        <div class="relative group"><label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Produto</label><input v-model="produtoSearch" @focus="mostrandoListaProdutos = true" @blur="setTimeout(() => mostrandoListaProdutos = false, 200)" placeholder="Buscar Produto..." class="input-clean w-full pl-8" :class="form.produto ? 'border-green-400 bg-green-50 dark:bg-green-900/20 dark:border-green-800 text-green-800 dark:text-green-400 font-bold' : ''"><i class="ph ph-magnifying-glass absolute left-2.5 top-[2.1rem] text-gray-400"></i><div v-if="mostrandoListaProdutos" class="absolute top-full left-0 w-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xl rounded-lg mt-1 max-h-48 overflow-y-auto z-50"><div v-for="p in produtosFiltrados" @click="selecionarProduto(p.nome)" class="p-2.5 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer border-b border-gray-50 dark:border-slate-800 text-gray-700 dark:text-gray-300">{{ p.nome }}</div></div></div>
+                        <div><label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Lote</label><input v-model="form.lote" @input="form.lote = form.lote.toUpperCase()" class="input-clean w-full uppercase font-bold" placeholder="EX: A123"></div>
+                        <div><label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Pós Folga?</label><select v-model="form.posFolga" class="input-clean w-full border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 font-medium text-blue-800 dark:text-blue-300"><option value="">Selecione...</option><option value="Sim">Sim</option><option value="Não">Não</option></select></div>
                     </div>
-
-                    <button @click="iniciarAnalise" class="btn-primary w-full py-4 text-lg mt-6 shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2">
-                        <i class="ph-bold ph-play"></i> Iniciar Análise
-                    </button>
+                    <button @click="iniciarAnalise" class="btn-primary w-full py-4 text-lg mt-6 shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2"><i class="ph-bold ph-play"></i> Iniciar Análise</button>
                 </div>
             </div>
 
             <div v-else class="flex flex-col h-full overflow-hidden">
-                <div class="bg-white dark:bg-slate-900 border-b dark:border-slate-800 p-3 shadow-sm z-10">
-                    <div class="grid grid-cols-2 md:grid-cols-5 gap-2 items-center opacity-70 hover:opacity-100 transition-opacity">
-                        <select v-model="form.linha" @change="salvarRascunho" class="input-clean py-1.5 text-sm"><option value="">Linha...</option><option v-for="l in cadastros.linhas" :value="l.nome">{{ l.nome }}</option></select>
-                        <select v-model="form.formatoId" @change="salvarRascunho" class="input-clean py-1.5 text-sm"><option value="">Formato...</option><option v-for="f in cadastros.formatos" :value="f.id">{{ f.nome }}</option></select>
-                        <div class="relative group">
-                            <input v-model="produtoSearch" @focus="mostrandoListaProdutos = true" @blur="setTimeout(() => mostrandoListaProdutos = false, 200)" placeholder="Buscar Produto..." class="input-clean w-full pl-8 py-1.5 text-sm" :class="form.produto ? 'border-green-400 bg-green-50 dark:bg-green-900/20 dark:border-green-800 text-green-800 dark:text-green-400 font-bold' : ''"><i class="ph ph-magnifying-glass absolute left-2 top-2 text-gray-400"></i>
-                            <div v-if="mostrandoListaProdutos" class="absolute top-full left-0 w-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xl rounded-lg mt-1 max-h-60 overflow-y-auto z-50"><div v-for="p in produtosFiltrados" @click="selecionarProduto(p.nome)" class="p-2.5 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer border-b border-gray-50 dark:border-slate-800 text-gray-700 dark:text-gray-300">{{ p.nome }}</div></div>
-                        </div>
-                        <input v-model="form.lote" @input="form.lote = form.lote.toUpperCase()" class="input-clean py-1.5 text-sm uppercase font-bold" placeholder="LOTE">
-                        <select v-model="form.posFolga" @change="salvarRascunho" class="input-clean py-1.5 text-sm border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 font-medium text-blue-800 dark:text-blue-300"><option value="">Pós Folga?</option><option value="Sim">Sim</option><option value="Não">Não</option></select>
-                    </div>
-                </div>
-                
+                <div class="bg-white dark:bg-slate-900 border-b dark:border-slate-800 p-3 shadow-sm z-10"><div class="grid grid-cols-2 md:grid-cols-5 gap-2 items-center opacity-70 hover:opacity-100 transition-opacity"><select v-model="form.linha" @change="salvarRascunho" class="input-clean py-1.5 text-sm"><option value="">Linha...</option><option v-for="l in cadastros.linhas" :value="l.nome">{{ l.nome }}</option></select><select v-model="form.formatoId" @change="salvarRascunho" class="input-clean py-1.5 text-sm"><option value="">Formato...</option><option v-for="f in cadastros.formatos" :value="f.id">{{ f.nome }}</option></select><div class="relative group"><input v-model="produtoSearch" @focus="mostrandoListaProdutos = true" @blur="setTimeout(() => mostrandoListaProdutos = false, 200)" placeholder="Buscar Produto..." class="input-clean w-full pl-8 py-1.5 text-sm" :class="form.produto ? 'border-green-400 bg-green-50 dark:bg-green-900/20 dark:border-green-800 text-green-800 dark:text-green-400 font-bold' : ''"><i class="ph ph-magnifying-glass absolute left-2 top-2 text-gray-400"></i><div v-if="mostrandoListaProdutos" class="absolute top-full left-0 w-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xl rounded-lg mt-1 max-h-60 overflow-y-auto z-50"><div v-for="p in produtosFiltrados" @click="selecionarProduto(p.nome)" class="p-2.5 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer border-b border-gray-50 dark:border-slate-800 text-gray-700 dark:text-gray-300">{{ p.nome }}</div></div></div><input v-model="form.lote" @input="form.lote = form.lote.toUpperCase()" class="input-clean py-1.5 text-sm uppercase font-bold" placeholder="LOTE"><select v-model="form.posFolga" @change="salvarRascunho" class="input-clean py-1.5 text-sm border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 font-medium text-blue-800 dark:text-blue-300"><option value="">Pós Folga?</option><option value="Sim">Sim</option><option value="Não">Não</option></select></div></div>
                 <main class="flex-1 overflow-y-auto p-4 bg-gray-100 dark:bg-slate-950 pb-32">
                     <div class="max-w-3xl mx-auto space-y-4">
-                        <div v-for="(peca, idx) in form.pecas" :key="idx" class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden animate-fade-in">
-                            <div class="bg-gray-50 dark:bg-slate-900 dark:border-slate-800 px-4 py-2 border-b flex justify-between items-center"><span class="font-bold text-gray-600 dark:text-gray-300 text-sm">PEÇA {{ idx + 1 }}</span><button @click="removerPeca(idx)" class="text-red-400 hover:text-red-600"><i class="ph ph-trash"></i></button></div>
-                            <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div><span class="text-[10px] font-bold text-blue-500 uppercase mb-2 block">Laterais</span><div class="grid grid-cols-4 gap-2"><div v-for="lado in ['A','B','C','D']" class="relative"><input type="text" :value="peca.lateraisDisplay[lado]" @input="(e) => mascararInput(e, peca, 'laterais', lado)" class="input-medicao" :class="getStatusClass(peca.laterais[lado], 'lateral')" placeholder="0,00"><span class="absolute top-1 left-1 text-[8px] font-bold text-gray-400">{{ lado }}</span></div></div></div>
-                                <div><span class="text-[10px] font-bold text-emerald-500 uppercase mb-2 block">Centrais</span><div class="grid grid-cols-2 gap-2"><div v-for="c in [1,2]" class="relative"><input type="text" :value="peca.centraisDisplay[c]" @input="(e) => mascararInput(e, peca, 'centrais', c)" class="input-medicao" :class="getStatusClass(peca.centrais[c], 'central')" placeholder="0,00"><span class="absolute top-1 left-1 text-[8px] font-bold text-gray-400">C{{ c }}</span></div></div></div>
-                            </div>
-                        </div>
+                        <div v-for="(peca, idx) in form.pecas" :key="idx" class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden animate-fade-in"><div class="bg-gray-50 dark:bg-slate-900 dark:border-slate-800 px-4 py-2 border-b flex justify-between items-center"><span class="font-bold text-gray-600 dark:text-gray-300 text-sm">PEÇA {{ idx + 1 }}</span><button @click="removerPeca(idx)" class="text-red-400 hover:text-red-600"><i class="ph ph-trash"></i></button></div><div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-6"><div><span class="text-[10px] font-bold text-blue-500 uppercase mb-2 block">Laterais</span><div class="grid grid-cols-4 gap-2"><div v-for="lado in ['A','B','C','D']" class="relative"><input type="text" :value="peca.lateraisDisplay[lado]" @input="(e) => mascararInput(e, peca, 'laterais', lado)" class="input-medicao" :class="getStatusClass(peca.laterais[lado], 'lateral')" placeholder="0,00"><span class="absolute top-1 left-1 text-[8px] font-bold text-gray-400">{{ lado }}</span></div></div></div><div><span class="text-[10px] font-bold text-emerald-500 uppercase mb-2 block">Centrais</span><div class="grid grid-cols-2 gap-2"><div v-for="c in [1,2]" class="relative"><input type="text" :value="peca.centraisDisplay[c]" @input="(e) => mascararInput(e, peca, 'centrais', c)" class="input-medicao" :class="getStatusClass(peca.centrais[c], 'central')" placeholder="0,00"><span class="absolute top-1 left-1 text-[8px] font-bold text-gray-400">C{{ c }}</span></div></div></div></div></div>
                         <button @click="adicionarPeca" class="w-full py-4 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl text-gray-400 hover:border-blue-500 hover:text-blue-500 transition font-medium bg-white dark:bg-slate-900"><i class="ph ph-plus-circle text-xl align-middle"></i> Nova Peça</button>
                     </div>
                 </main>
-                
-                <div class="fixed bottom-2 left-0 right-0 flex justify-center z-50 pointer-events-none">
-                    <button @click="gerarRelatorioFinal" class="pointer-events-auto bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 py-3 shadow-2xl flex items-center gap-3 transition-transform hover:scale-105 active:scale-95 border-2 border-white/20 backdrop-blur-sm"><i class="ph-fill ph-check-circle text-2xl"></i> <span class="font-bold text-lg">Concluir</span></button>
-                </div>
+                <div class="fixed bottom-2 left-0 right-0 flex justify-center z-50 pointer-events-none"><button @click="gerarRelatorioFinal" class="pointer-events-auto bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 py-3 shadow-2xl flex items-center gap-3 transition-transform hover:scale-105 active:scale-95 border-2 border-white/20 backdrop-blur-sm"><i class="ph-fill ph-check-circle text-2xl"></i> <span class="font-bold text-lg">Concluir</span></button></div>
             </div>
         </div>
 
