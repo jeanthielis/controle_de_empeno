@@ -237,7 +237,36 @@
 
                 <div v-if="adminTab === 'formatos'">
                     <div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold hidden md:block">Formatos</h2><button @click="novoFormato" class="btn-primary py-2 px-4 shadow-lg shadow-blue-500/20"><i class="ph ph-plus-circle mr-2"></i> Novo</button></div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"><div v-for="fmt in cadastros.formatos" :key="fmt.id" class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-800 p-6 relative group hover:shadow-md transition-all"><button @click="removerItem('formatos', fmt.id)" class="absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors"><i class="ph ph-trash text-xl"></i></button><div class="mb-6"><label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Nome</label><input v-model="fmt.nome" @change="atualizarFormato(fmt)" class="block w-full text-xl font-bold text-blue-600 dark:text-blue-400 border-b border-dashed border-gray-300 dark:border-gray-600 focus:border-blue-500 outline-none bg-transparent pb-1"></div><div class="space-y-4"><div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-100 dark:border-blue-800"><div class="flex items-center gap-2 mb-2"><i class="ph-fill ph-arrows-vertical text-blue-500"></i><span class="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase">Lateral</span></div><div class="flex items-center justify-between gap-2"><input type="number" step="0.01" v-model.number="fmt.latMin" @change="atualizarFormato(fmt)" class="input-clean text-center text-sm font-bold w-full"><span class="text-blue-300 font-bold">/</span><input type="number" step="0.01" v-model.number="fmt.latMax" @change="atualizarFormato(fmt)" class="input-clean text-center text-sm font-bold w-full"></div></div><div class="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl border border-emerald-100 dark:border-emerald-800"><div class="flex items-center gap-2 mb-2"><i class="ph-fill ph-arrows-in-cardinal text-emerald-500"></i><span class="text-xs font-bold text-emerald-700 dark:text-emerald-300 uppercase">Central</span></div><div class="flex items-center justify-between gap-2"><input type="number" step="0.01" v-model.number="fmt.centMin" @change="atualizarFormato(fmt)" class="input-clean text-center text-sm font-bold w-full"><span class="text-emerald-300 font-bold">/</span><input type="number" step="0.01" v-model.number="fmt.centMax" @change="atualizarFormato(fmt)" class="input-clean text-center text-sm font-bold w-full"></div></div></div></div></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"><div v-for="fmt in cadastros.formatos" :key="fmt.id" class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-800 p-6 relative group hover:shadow-md transition-all"><button @click="removerItem('formatos', fmt.id)" class="absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors"><i class="ph ph-trash text-xl"></i></button><div class="mb-6"><label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Nome</label><input v-model="fmt.nome" @change="atualizarFormato(fmt)" class="block w-full text-xl font-bold text-blue-600 dark:text-blue-400 border-b border-dashed border-gray-300 dark:border-gray-600 focus:border-blue-500 outline-none bg-transparent pb-1"></div><div class="space-y-4"><div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-100 dark:border-blue-800"><div class="flex items-center gap-2 mb-2"><i class="ph-fill ph-arrows-vertical text-blue-500"></i><span class="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase">Lateral</span></div><div class="flex items-center justify-between gap-2"><input type="number" step="0.01" v-model.number="fmt.latMin" @change="atualizarFormato(fmt)" class="input-clean text-center text-sm font-bold w-full"><span class="text-blue-300 font-bold">/</span><input type="number" step="0.01" v-model.number="fmt.latMax" @change="atualizarFormato(fmt)" class="input-clean text-center text-sm font-bold w-full"></div></div><div class="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl border border-emerald-100 dark:border-emerald-800"><div class="flex items-center gap-2 mb-2"><i class="ph-fill ph-arrows-in-cardinal text-emerald-500"></i><span class="text-xs font-bold text-emerald-700 dark:text-emerald-300 uppercase">Central</span></div><div class="flex items-center justify-between gap-2"><input type="number" step="0.01" v-model.number="fmt.centMin" @change="atualizarFormato(fmt)" class="input-clean text-center text-sm font-bold w-full"><span class="text-emerald-300 font-bold">/</span><input type="number" step="0.01" v-model.number="fmt.centMax" @change="atualizarFormato(fmt)" class="input-clean text-center text-sm font-bold w-full"></div></div>
+                                <!-- RETÍFICAS section -->
+                                <div class="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-xl border border-orange-100 dark:border-orange-800">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <div class="flex items-center gap-2"><i class="ph-fill ph-gear text-orange-500"></i><span class="text-xs font-bold text-orange-700 dark:text-orange-300 uppercase">Retíficas (Tam. & Esq.)</span></div>
+                                        <button @click="adicionarRetifica(fmt)" class="text-[10px] bg-orange-500 text-white px-2 py-1 rounded-lg hover:bg-orange-600 font-bold">+ Add</button>
+                                    </div>
+                                    <div v-if="!fmt.retificas || !fmt.retificas.length" class="text-[10px] text-orange-400 text-center py-2">Nenhuma retífica configurada</div>
+                                    <div v-for="(ret, ri) in fmt.retificas" :key="ri" class="mb-3 last:mb-0 bg-white dark:bg-slate-900 rounded-lg p-2 border border-orange-100 dark:border-orange-900">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase">Retífica</span>
+                                                <input type="number" v-model.number="ret.numero" class="input-clean w-12 text-center text-xs font-bold py-0.5 px-1">
+                                            </div>
+                                            <button @click="removerRetifica(fmt, ri)" class="text-red-400 hover:text-red-600 text-xs"><i class="ph ph-trash"></i></button>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-2 text-[10px] text-gray-500 dark:text-gray-400 mb-1">
+                                            <span class="font-bold">Tamanho (min/max)</span>
+                                            <span class="font-bold">Esquadro (min/max)</span>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <div class="flex items-center gap-1"><input type="number" step="0.01" v-model.number="ret.tamanhoMin" class="input-clean text-center text-xs font-bold w-full py-0.5" placeholder="min"><span class="text-gray-300">/</span><input type="number" step="0.01" v-model.number="ret.tamanhoMax" class="input-clean text-center text-xs font-bold w-full py-0.5" placeholder="max"></div>
+                                            <div class="flex items-center gap-1"><input type="number" step="0.01" v-model.number="ret.esquadroMin" class="input-clean text-center text-xs font-bold w-full py-0.5" placeholder="min"><span class="text-gray-300">/</span><input type="number" step="0.01" v-model.number="ret.esquadroMax" class="input-clean text-center text-xs font-bold w-full py-0.5" placeholder="max"></div>
+                                        </div>
+                                    </div>
+                                    <button v-if="fmt.retificas && fmt.retificas.length" @click="salvarRetificasFormato(fmt)" class="w-full mt-2 text-[10px] bg-orange-500 text-white py-1.5 rounded-lg hover:bg-orange-600 font-bold flex items-center justify-center gap-1">
+                                        <i class="ph-bold ph-floppy-disk"></i> Salvar Retíficas
+                                    </button>
+                                </div>
+                            </div></div></div>
                 </div>
 
                 <div v-if="adminTab === 'cadastros'">
@@ -313,9 +342,140 @@
             <div v-else class="flex flex-col h-full overflow-hidden">
                 <div class="bg-white dark:bg-slate-900 border-b dark:border-slate-800 p-3 shadow-sm z-10"><div class="grid grid-cols-2 md:grid-cols-5 gap-2 items-center opacity-70 hover:opacity-100 transition-opacity"><select v-model="form.linha" @change="salvarRascunho" class="input-clean py-1.5 text-sm"><option value="">Linha...</option><option v-for="l in cadastros.linhas" :value="l.nome">{{ l.nome }}</option></select><select v-model="form.formatoId" @change="salvarRascunho" class="input-clean py-1.5 text-sm"><option value="">Formato...</option><option v-for="f in cadastros.formatos" :value="f.id">{{ f.nome }}</option></select><div class="relative group"><input v-model="produtoSearch" @focus="mostrandoListaProdutos = true" @blur="setTimeout(() => mostrandoListaProdutos = false, 200)" placeholder="Buscar Produto..." class="input-clean w-full pl-8 py-1.5 text-sm" :class="form.produto ? 'border-green-400 bg-green-50 dark:bg-green-900/20 dark:border-green-800 text-green-800 dark:text-green-400 font-bold' : ''"><i class="ph ph-magnifying-glass absolute left-2 top-2 text-gray-400"></i><div v-if="mostrandoListaProdutos" class="absolute top-full left-0 w-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xl rounded-lg mt-1 max-h-60 overflow-y-auto z-50"><div v-for="p in produtosFiltrados" @click="selecionarProduto(p.nome)" class="p-2.5 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer border-b border-gray-50 dark:border-slate-800 text-gray-700 dark:text-gray-300">{{ p.nome }}</div></div></div><input v-model="form.lote" @input="form.lote = form.lote.toUpperCase()" class="input-clean py-1.5 text-sm uppercase font-bold" placeholder="LOTE"><select v-model="form.posFolga" @change="salvarRascunho" class="input-clean py-1.5 text-sm border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 font-medium text-blue-800 dark:text-blue-300"><option value="">Pós Folga?</option><option value="Sim">Sim</option><option value="Não">Não</option></select></div></div>
                 <main class="flex-1 overflow-y-auto p-4 bg-gray-100 dark:bg-slate-950 pb-32">
-                    <div class="max-w-3xl mx-auto space-y-4">
+                    <!-- ABAS -->
+                    <div class="max-w-3xl mx-auto mb-4">
+                        <div class="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-1 flex gap-1 shadow-sm">
+                            <button @click="inspectorTab = 'empeno'" :class="['flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5', inspectorTab === 'empeno' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800']">
+                                <i class="ph-fill ph-arrows-out-line-vertical"></i> Empeno
+                            </button>
+                            <button @click="inspectorTab = 'espessura'" :class="['flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5', inspectorTab === 'espessura' ? 'bg-violet-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800']">
+                                <i class="ph-fill ph-stack"></i> Espessura
+                                <span v-if="resultadoEspessura" :class="resultadoEspessura === 'Aprovado' ? 'bg-green-500' : 'bg-red-500'" class="w-2 h-2 rounded-full inline-block"></span>
+                            </button>
+                            <button @click="inspectorTab = 'tamanho'" :class="['flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5', inspectorTab === 'tamanho' ? 'bg-orange-500 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800']">
+                                <i class="ph-fill ph-ruler"></i> Tam. & Esq.
+                                <span v-if="resultadoTamanhoEsquadro" :class="resultadoTamanhoEsquadro === 'Aprovado' ? 'bg-green-500' : 'bg-red-500'" class="w-2 h-2 rounded-full inline-block"></span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ABA: EMPENO -->
+                    <div v-show="inspectorTab === 'empeno'" class="max-w-3xl mx-auto space-y-4">
                         <div v-for="(peca, idx) in form.pecas" :key="idx" class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden animate-fade-in"><div class="bg-gray-50 dark:bg-slate-900 dark:border-slate-800 px-4 py-2 border-b flex justify-between items-center"><span class="font-bold text-gray-600 dark:text-gray-300 text-sm">PEÇA {{ idx + 1 }}</span><button @click="removerPeca(idx)" class="text-red-400 hover:text-red-600"><i class="ph ph-trash"></i></button></div><div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-6"><div><span class="text-[10px] font-bold text-blue-500 uppercase mb-2 block">Laterais</span><div class="grid grid-cols-4 gap-2"><div v-for="lado in ['A','B','C','D']" class="relative"><input type="text" :value="peca.lateraisDisplay[lado]" @input="(e) => mascararInput(e, peca, 'laterais', lado)" class="input-medicao" :class="getStatusClass(peca.laterais[lado], 'lateral')" placeholder="0,00"><span class="absolute top-1 left-1 text-[8px] font-bold text-gray-400">{{ lado }}</span></div></div></div><div><span class="text-[10px] font-bold text-emerald-500 uppercase mb-2 block">Centrais</span><div class="grid grid-cols-2 gap-2"><div v-for="c in [1,2]" class="relative"><input type="text" :value="peca.centraisDisplay[c]" @input="(e) => mascararInput(e, peca, 'centrais', c)" class="input-medicao" :class="getStatusClass(peca.centrais[c], 'central')" placeholder="0,00"><span class="absolute top-1 left-1 text-[8px] font-bold text-gray-400">C{{ c }}</span></div></div></div></div></div>
                         <button @click="adicionarPeca" class="w-full py-4 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl text-gray-400 hover:border-blue-500 hover:text-blue-500 transition font-medium bg-white dark:bg-slate-900"><i class="ph ph-plus-circle text-xl align-middle"></i> Nova Peça</button>
+                    </div>
+
+                    <!-- ABA: ESPESSURA -->
+                    <div v-show="inspectorTab === 'espessura'" class="max-w-3xl mx-auto space-y-4">
+                        <!-- Card de espessura declarada -->
+                        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 p-5">
+                            <h3 class="text-sm font-bold text-violet-600 dark:text-violet-400 uppercase mb-3 flex items-center gap-2"><i class="ph-fill ph-stack"></i> Espessura Declarada (mm)</h3>
+                            <div class="flex items-center gap-4">
+                                <input type="number" step="0.01" v-model.number="form.espessuraDeclarada" @change="salvarRascunho" class="input-clean text-center font-bold text-xl w-32" placeholder="ex: 10.00">
+                                <div v-if="form.espessuraDeclarada" class="text-xs text-gray-500 dark:text-gray-400 flex-1">
+                                    <div class="flex gap-4">
+                                        <span>Min <b class="text-red-500">{{ espessuraMin?.toFixed(2) }}</b></span>
+                                        <span>Max <b class="text-red-500">{{ espessuraMax?.toFixed(2) }}</b></span>
+                                        <span class="text-gray-400">(±5%)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pontos medidos -->
+                        <div v-for="(ponto, idx) in form.pontosEspessura" :key="idx" class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden">
+                            <div class="px-4 py-2 border-b bg-gray-50 dark:bg-slate-900 dark:border-slate-800 flex justify-between items-center">
+                                <span class="font-bold text-sm text-gray-600 dark:text-gray-300">PONTO {{ idx + 1 }}</span>
+                                <div class="flex items-center gap-3">
+                                    <span v-if="mediaEspessura(ponto) !== null" :class="['text-xs font-bold px-2 py-0.5 rounded-full', getStatusEspessura(mediaEspessura(ponto)) === 'status-ok' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400']">
+                                        Média: {{ mediaEspessura(ponto)?.toFixed(2) }}mm
+                                    </span>
+                                    <button @click="removerPontoEspessura(idx)" class="text-red-400 hover:text-red-600"><i class="ph ph-trash"></i></button>
+                                </div>
+                            </div>
+                            <div class="p-4 grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="text-[10px] font-bold text-violet-500 uppercase mb-1.5 block">Prensa</label>
+                                    <input type="number" step="0.01" v-model.number="ponto.prensa" @change="salvarRascunho" :class="['input-clean text-center font-bold w-full', getStatusEspessura(mediaEspessura(ponto))]" placeholder="0.00">
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-bold text-violet-400 uppercase mb-1.5 block">Cavidade <span class="font-normal text-gray-400">(opcional)</span></label>
+                                    <input type="number" step="0.01" v-model.number="ponto.cavidade" @change="salvarRascunho" :class="['input-clean text-center font-bold w-full', ponto.cavidade !== null && ponto.cavidade !== '' ? getStatusEspessura(mediaEspessura(ponto)) : '']" placeholder="0.00">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button @click="adicionarPontoEspessura" class="w-full py-4 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl text-gray-400 hover:border-violet-500 hover:text-violet-500 transition font-medium bg-white dark:bg-slate-900">
+                            <i class="ph ph-plus-circle text-xl align-middle"></i> Adicionar Ponto de Medição
+                        </button>
+
+                        <!-- Resumo espessura -->
+                        <div v-if="resultadoEspessura" :class="['rounded-xl p-4 text-center font-bold text-lg border', resultadoEspessura === 'Aprovado' ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' : 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800']">
+                            <i :class="resultadoEspessura === 'Aprovado' ? 'ph-fill ph-check-circle' : 'ph-fill ph-x-circle'" class="text-2xl align-middle mr-2"></i>
+                            Espessura: {{ resultadoEspessura }}
+                        </div>
+                    </div>
+
+                    <!-- ABA: TAMANHO & ESQUADRO -->
+                    <div v-show="inspectorTab === 'tamanho'" class="max-w-3xl mx-auto space-y-4">
+                        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 p-4">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                                <i class="ph-fill ph-info text-orange-400 text-base"></i>
+                                Os ranges de Tamanho e Esquadro são configurados por retífica no painel <b>Admin → Formatos</b>.
+                            </p>
+                        </div>
+
+                        <!-- Medições -->
+                        <div v-for="(med, idx) in form.medicoesTamanhoEsquadro" :key="idx" class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden">
+                            <div class="px-4 py-2 border-b bg-gray-50 dark:bg-slate-900 dark:border-slate-800 flex justify-between items-center">
+                                <span class="font-bold text-sm text-gray-600 dark:text-gray-300">MEDIÇÃO {{ idx + 1 }}</span>
+                                <button @click="removerMedicaoTE(idx)" class="text-red-400 hover:text-red-600"><i class="ph ph-trash"></i></button>
+                            </div>
+                            <div class="p-4 space-y-4">
+                                <div>
+                                    <label class="text-[10px] font-bold text-orange-500 uppercase mb-1.5 block">Nº Retífica</label>
+                                    <select v-model="med.retifica" @change="salvarRascunho" class="input-clean w-full font-bold">
+                                        <option value="">Selecione a retífica...</option>
+                                        <option v-for="nr in numerosRetifica" :value="nr">Retífica {{ nr }}</option>
+                                    </select>
+                                    <p v-if="med.retifica && getRetificaConfig && !numerosRetifica.includes(med.retifica)" class="text-xs text-red-500 mt-1">Retífica não encontrada no formato atual.</p>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="text-[10px] font-bold text-orange-500 uppercase mb-1.5 block">Tamanho (mm)</label>
+                                        <input type="number" step="0.01" v-model.number="med.tamanho" @change="salvarRascunho" :class="['input-clean text-center font-bold w-full', getStatusTamanho(med.retifica, med.tamanho)]" placeholder="0.00">
+                                        <div v-if="med.retifica && configAtiva.retificas" class="mt-1 text-[10px] text-gray-400 text-center">
+                                            <template v-for="r in configAtiva.retificas">
+                                                <template v-if="String(r.numero) === String(med.retifica)">
+                                                    Range: {{ r.tamanhoMin }} – {{ r.tamanhoMax }}
+                                                </template>
+                                            </template>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] font-bold text-orange-400 uppercase mb-1.5 block">Esquadro (mm)</label>
+                                        <input type="number" step="0.01" v-model.number="med.esquadro" @change="salvarRascunho" :class="['input-clean text-center font-bold w-full', getStatusEsquadro(med.retifica, med.esquadro)]" placeholder="0.00">
+                                        <div v-if="med.retifica && configAtiva.retificas" class="mt-1 text-[10px] text-gray-400 text-center">
+                                            <template v-for="r in configAtiva.retificas">
+                                                <template v-if="String(r.numero) === String(med.retifica)">
+                                                    Range: {{ r.esquadroMin }} – {{ r.esquadroMax }}
+                                                </template>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button @click="adicionarMedicaoTE" class="w-full py-4 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl text-gray-400 hover:border-orange-500 hover:text-orange-500 transition font-medium bg-white dark:bg-slate-900">
+                            <i class="ph ph-plus-circle text-xl align-middle"></i> Adicionar Medição
+                        </button>
+
+                        <!-- Resumo -->
+                        <div v-if="resultadoTamanhoEsquadro" :class="['rounded-xl p-4 text-center font-bold text-lg border', resultadoTamanhoEsquadro === 'Aprovado' ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' : 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800']">
+                            <i :class="resultadoTamanhoEsquadro === 'Aprovado' ? 'ph-fill ph-check-circle' : 'ph-fill ph-x-circle'" class="text-2xl align-middle mr-2"></i>
+                            Tamanho & Esquadro: {{ resultadoTamanhoEsquadro }}
+                        </div>
                     </div>
                 </main>
                 <div class="fixed bottom-2 left-0 right-0 flex justify-center z-50 pointer-events-none"><button @click="gerarRelatorioFinal" class="pointer-events-auto bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 py-3 shadow-2xl flex items-center gap-3 transition-transform hover:scale-105 active:scale-95 border-2 border-white/20 backdrop-blur-sm"><i class="ph-fill ph-check-circle text-2xl"></i> <span class="font-bold text-lg">Concluir</span></button></div>
