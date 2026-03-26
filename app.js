@@ -19,7 +19,7 @@ createApp({
         };
 
         const currentView = ref('login'); 
-        const loginData = ref({ user: '', pass: '', remember: false, perfil: '' });
+        const loginData = ref({ user: '', pass: '', remember: false, perfil: '', nome: '' });
         const loading = ref(false);
         const salvandoAuto = ref(false);
         const relatorioSelecionado = ref(null);
@@ -399,12 +399,14 @@ createApp({
                 if (userLower === 'admin' && pass === 'admin') { 
                     currentView.value = 'admin'; 
                     loginData.value.perfil = 'admin';
+                    loginData.value.nome = 'Administrador';
                     notify('Super Admin', 'OK', 'sucesso'); loading.value = false; return; 
                 } 
                 const usuarioEncontrado = cadastros.value.usuarios.find(u => u.login === userLower && u.matricula === pass); 
                 if (usuarioEncontrado) { 
                     const perfilAtribuido = usuarioEncontrado.perfil || (usuarioEncontrado.admin ? 'admin' : 'inspetor');
                     loginData.value.perfil = perfilAtribuido;
+                    loginData.value.nome = usuarioEncontrado.nome || userLower;
 
                     if (remember) { 
                         localStorage.setItem('qc_user', userLower); localStorage.setItem('qc_pass', pass); 
@@ -516,8 +518,6 @@ createApp({
         const gerarRelatorioFinal = async () => {
             if (!form.value.linha || !form.value.produto || !form.value.formatoId) { notify('Erro', 'Cabeçalho incompleto.', 'erro'); return; }
             if (!form.value.posFolga) { notify('Atenção', 'Preencha se é Pós Folga.', 'erro'); return; }
-
-            // Exige pelo menos uma seção com dados
             if (!temDadosEmpeno.value && !temDadosEspessura.value && !temDadosTamanhoEsquadro.value) {
                 notify('Atenção', 'Nenhuma medição foi preenchida.', 'erro'); return;
             }
@@ -527,68 +527,104 @@ createApp({
 
             const now = new Date();
             const conf = configAtiva.value;
-            let txt = `*RELATÓRIO DE QUALIDADE*\n*Data:* ${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString().slice(0,5)}\n*Responsável:* ${loginData.value.user}\n`;
-            if (form.value.posFolga === 'Sim') txt += `*Pós Folga:* Sim\n`;
-            txt += `*Linha:* ${form.value.linha}\n*Produto:* ${form.value.produto}\n*Formato:* ${conf.nome}\n*Lote:* ${form.value.lote}\n`;
+            const dataHora = `${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR').slice(0,5)}`;
 
-            // ── SEÇÃO EMPENO (só se tiver dados) ──
+            // Calcula resultado geral para o banner final
+            let resultadoFinal = 'APROVADO ✅';
             if (temDadosEmpeno.value) {
-                txt += `\n━━ EMPENO ━━\n`;
-                txt += `Range Lateral: ${conf.latMin} a ${conf.latMax} | Range Central: ${conf.centMin} a ${conf.centMax}\n\n`;
-                form.value.pecas.forEach((p, i) => {
-                    const lateraisPreenchidos = ['A','B','C','D'].filter(l => p.laterais[l] !== null && p.laterais[l] !== '');
-                    const centraisPreenchidos = [1,2].filter(c => p.centrais[c] !== null && p.centrais[c] !== '');
-                    if (!lateraisPreenchidos.length && !centraisPreenchidos.length) return; // pula peças vazias
-                    txt += `*Peça ${i+1}*\n`;
-                    lateraisPreenchidos.forEach(lado => {
-                        const val = p.laterais[lado]; const visual = p.lateraisDisplay[lado];
-                        const icon = getStatusClass(val, 'lateral') === 'status-ok' ? '🟢' : '🔴';
-                        txt += `${icon} Lat ${lado}: ${visual}\n`;
+                for (const p of form.value.pecas) {
+                    for (const v of Object.values(p.laterais)) { if (getStatusClass(v, 'lateral') === 'status-bad') { resultadoFinal = 'REPROVADO ❌'; break; } }
+                    for (const v of Object.values(p.centrais)) { if (getStatusClass(v, 'central') === 'status-bad') { resultadoFinal = 'REPROVADO ❌'; break; } }
+                }
+            }
+            if (temDadosEspessura.value   && resultadoEspessura.value   === 'Reprovado') resultadoFinal = 'REPROVADO ❌';
+            if (temDadosTamanhoEsquadro.value && resultadoTamanhoEsquadro.value === 'Reprovado') resultadoFinal = 'REPROVADO ❌';
+
+            let txt = '';
+
+            // ── CABEÇALHO (igual à foto) ──
+            txt += `*RELATÓRIO DE EMPENO*\n`;
+            txt += `*Data:* ${dataHora}\n`;
+            txt += `*Responsável:* ${loginData.value.nome || loginData.value.user}\n`;
+            txt += `*Linha:* ${form.value.linha}\n`;
+            txt += `*Produto:* ${form.value.produto}\n`;
+            txt += `*Formato:* ${conf.nome}\n`;
+            txt += `*Lote:* ${form.value.lote}`;
+            if (form.value.posFolga === 'Sim') txt += ` *(Pós Folga)*`;
+            txt += `\n`;
+
+            // ── SEÇÃO EMPENO ──
+            if (temDadosEmpeno.value) {
+                txt += `\nRange Lateral:(${conf.latMin} a ${conf.latMax})\n`;
+                txt += `Range Central:(${conf.centMin} a ${conf.centMax})\n`;
+
+                let numPeca = 0;
+                form.value.pecas.forEach((p) => {
+                    const lats  = ['A','B','C','D'].filter(l => p.laterais[l] !== null && p.laterais[l] !== '');
+                    const cents = [1, 2].filter(c => p.centrais[c] !== null && p.centrais[c] !== '');
+                    if (!lats.length && !cents.length) return;
+                    numPeca++;
+                    txt += `\n*Peça ${numPeca}*\n`;
+                    lats.forEach(lado => {
+                        const ok = getStatusClass(p.laterais[lado], 'lateral') === 'status-ok';
+                        txt += `${ok ? '🟢' : '🔴'} Lado ${lado}: ${p.lateraisDisplay[lado]}\n`;
                     });
-                    if (centraisPreenchidos.length) {
-                        centraisPreenchidos.forEach(num => {
-                            const val = p.centrais[num]; const visual = p.centraisDisplay[num];
-                            const label = num === 1 ? 'Lado A' : 'Lado B';
-                            const icon = getStatusClass(val, 'central') === 'status-ok' ? '🟢' : '🔴';
-                            txt += `${icon} Cent ${label}: ${visual}\n`;
+                    if (cents.length) {
+                        txt += `*Central*\n`;
+                        cents.forEach(num => {
+                            const label = num === 1 ? 'A' : 'B';
+                            const ok = getStatusClass(p.centrais[num], 'central') === 'status-ok';
+                            txt += `${ok ? '🟢' : '🔴'} Lado ${label}: ${p.centraisDisplay[num]}\n`;
                         });
                     }
-                    txt += `\n`;
                 });
             }
 
-            // ── SEÇÃO ESPESSURA (só se tiver dados) ──
+            // ── SEÇÃO ESPESSURA ──
             if (temDadosEspessura.value) {
-                txt += `\n━━ ESPESSURA ━━\n`;
-                txt += `Declarada: ${form.value.espessuraDeclarada}mm | Range: ${espessuraMin.value?.toFixed(3)} – ${espessuraMax.value?.toFixed(3)}mm\n\n`;
+                txt += `\n*ESPESSURA*\n`;
+                txt += `Declarada: ${form.value.espessuraDeclarada}mm  Range:(${espessuraMin.value?.toFixed(2)} a ${espessuraMax.value?.toFixed(2)})\n`;
                 form.value.pecasEspessura.forEach(p => {
                     const pontosValidos = (p.pontos || []).filter(v => v !== null && v !== '' && !isNaN(parseFloat(v)));
-                    if (!pontosValidos.length) return; // pula peças sem pontos
+                    if (!pontosValidos.length) return;
                     const med = calcMediaPecaEspessura(p);
-                    const icon = med !== null ? (getStatusEspessura(med) === 'status-ok' ? '🟢' : '🔴') : '⚪';
-                    const id = [p.prensa ? `Prensa ${p.prensa}` : '', p.cavidade ? `Cav ${p.cavidade}` : ''].filter(Boolean).join(' / ') || 'Peça';
-                    const pontosStr = pontosValidos.map((v, pi) => `P${pi+1}=${parseFloat(v).toFixed(3)}`).join(' | ');
-                    txt += `${icon} ${id}: ${pontosStr} → Média=${med !== null ? med.toFixed(3) : '-'}mm\n`;
+                    const ok  = med !== null && getStatusEspessura(med) === 'status-ok';
+                    const id  = [p.prensa ? `Prensa ${p.prensa}` : '', p.cavidade ? `Cav ${p.cavidade}` : ''].filter(Boolean).join(' / ') || 'Peça';
+                    txt += `\n*${id}*\n`;
+                    pontosValidos.forEach((v, pi) => {
+                        txt += `Ponto ${pi + 1}: ${parseFloat(v).toFixed(2)}mm\n`;
+                    });
+                    txt += `${ok ? '🟢' : '🔴'} Média: ${med !== null ? med.toFixed(2) : '-'}mm\n`;
                 });
             }
 
-            // ── SEÇÃO TAMANHO & ESQUADRO (só se tiver dados) ──
+            // ── SEÇÃO TAMANHO & ESQUADRO ──
             if (temDadosTamanhoEsquadro.value) {
-                txt += `\n━━ TAMANHO & ESQUADRO ━━\n`;
-                if (conf.tamanhoMin !== undefined) txt += `Range Tam.: ${conf.tamanhoMin} – ${conf.tamanhoMax} | Range Esq.: ${conf.esquadroMin} – ${conf.esquadroMax}\n\n`;
-                form.value.medicoesTamanhoEsquadro.forEach((m, i) => {
+                txt += `\n*TAMANHO & ESQUADRO*\n`;
+                if (conf.tamanhoMin !== undefined) {
+                    txt += `Range Tamanho:(${conf.tamanhoMin} a ${conf.tamanhoMax})\n`;
+                    txt += `Range Esquadro:(${conf.esquadroMin} a ${conf.esquadroMax})\n`;
+                }
+                let numMed = 0;
+                form.value.medicoesTamanhoEsquadro.forEach(m => {
                     const temTam = m.tamanho !== null && m.tamanho !== '';
                     const temEsq = m.esquadro !== null && m.esquadro !== '';
-                    if (!temTam && !temEsq) return; // pula medições vazias
-                    const retLabel = m.retifica ? ` (Ret. ${m.retifica})` : '';
-                    txt += `Medição ${i+1}${retLabel}:\n`;
-                    if (temTam) { const icon = getStatusTamanho(m.tamanho) === 'status-ok' ? '🟢' : '🔴'; txt += `  ${icon} Tamanho: ${m.tamanho}mm\n`; }
-                    if (temEsq) { const icon = getStatusEsquadro(m.esquadro) === 'status-ok' ? '🟢' : '🔴'; txt += `  ${icon} Esquadro: ${m.esquadro}mm\n`; }
+                    if (!temTam && !temEsq) return;
+                    numMed++;
+                    const retLabel = m.retifica ? ` — Ret. ${m.retifica}` : '';
+                    txt += `\n*Medição ${numMed}${retLabel}*\n`;
+                    if (temTam) { const ok = getStatusTamanho(m.tamanho) === 'status-ok'; txt += `${ok ? '🟢' : '🔴'} Tamanho: ${m.tamanho}mm\n`; }
+                    if (temEsq) { const ok = getStatusEsquadro(m.esquadro) === 'status-ok'; txt += `${ok ? '🟢' : '🔴'} Esquadro: ${m.esquadro}mm\n`; }
                 });
             }
 
+            // ── RESULTADO FINAL ──
+            txt += `\n*━━━━━━━━━━━━━━━━━━━━*\n`;
+            txt += `*RESULTADO: ${resultadoFinal}*\n`;
+            txt += `*━━━━━━━━━━━━━━━━━━━━*`;
+
             reportText.value = txt;
-            notify('Sucesso', 'Relatório gerado com sucesso!', 'sucesso');
+            notify('Sucesso', 'Relatório gerado!', 'sucesso');
         };
         const getStatusRelatorio = (relatorio, valor, tipo) => { if (valor === null || valor === undefined || valor === '') return true; const num = parseFloat(valor); const limites = relatorio.limitesSnapshot || cadastros.value.formatos.find(f => f.id === relatorio.formatoId) || { latMin: -99, latMax: 99, centMin: -99, centMax: 99 }; const min = tipo === 'lateral' ? limites.latMin : limites.centMin; const max = tipo === 'lateral' ? limites.latMax : limites.centMax; return (num >= min && num <= max); };
         const configAtiva = computed(() => cadastros.value.formatos.find(f => f.id === form.value.formatoId) || { nome: '...', latMin: -99, latMax: 99, centMin: -99, centMax: 99 });
@@ -679,12 +715,20 @@ createApp({
             if (loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 500); }
             const savedTheme = localStorage.getItem('theme');
             if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) { isDarkMode.value = true; document.documentElement.classList.add('dark'); } else { document.documentElement.classList.remove('dark'); }
-            const savedUser = localStorage.getItem('qc_user'); const savedPass = localStorage.getItem('qc_pass'); if(savedUser && savedPass) { loginData.value = { user: savedUser, pass: savedPass, remember: true }; }
+            const savedUser = localStorage.getItem('qc_user'); const savedPass = localStorage.getItem('qc_pass');
+            if (savedUser && savedPass) { loginData.value = { user: savedUser, pass: savedPass, remember: true, perfil: '', nome: '' }; }
             
             onSnapshot(collection(db, "formatos"), s => cadastros.value.formatos = s.docs.map(d=>({id:d.id,...d.data()})));
             onSnapshot(collection(db, "produtos"), s => cadastros.value.produtos = s.docs.map(d=>({id:d.id,...d.data()})));
             onSnapshot(collection(db, "linhas"), s => cadastros.value.linhas = s.docs.map(d=>({id:d.id,...d.data()})));
-            onSnapshot(collection(db, "usuarios"), s => cadastros.value.usuarios = s.docs.map(d=>({id:d.id,...d.data()})));
+            onSnapshot(collection(db, "usuarios"), s => {
+                cadastros.value.usuarios = s.docs.map(d=>({id:d.id,...d.data()}));
+                // Restaura nome completo quando "lembrar sessão" fez login automático
+                if (loginData.value.user && !loginData.value.nome) {
+                    const u = cadastros.value.usuarios.find(u => u.login === loginData.value.user);
+                    if (u) { loginData.value.nome = u.nome || loginData.value.user; loginData.value.perfil = u.perfil || (u.admin ? 'admin' : 'inspetor'); }
+                }
+            });
             onSnapshot(query(collection(db, "inspecoes"), orderBy("dataHora", "desc")), s => {
                 cadastros.value.inspecoes = s.docs.map(d=>({id:d.id,...d.data()}));
                 nextTick(() => { if (adminTab.value === 'dashboard') updateCharts(); });
