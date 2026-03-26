@@ -83,9 +83,11 @@
                     <button v-if="loginData.perfil !== 'analista'" @click="navigateAdmin('usuarios')" :class="['nav-item', adminTab === 'usuarios' ? 'active' : '']"><i class="ph ph-users"></i> Usuários</button>
                     <button v-if="loginData.perfil !== 'analista'" @click="navigateAdmin('formatos')" :class="['nav-item', adminTab === 'formatos' ? 'active' : '']"><i class="ph ph-ruler"></i> Formatos</button>
                     <button v-if="loginData.perfil !== 'analista'" @click="navigateAdmin('cadastros')" :class="['nav-item', adminTab === 'cadastros' ? 'active' : '']"><i class="ph ph-package"></i> Produtos/Linhas</button>
+                    <button @click="navigateAdmin('dimensionais')" :class="['nav-item', adminTab === 'dimensionais' ? 'active text-violet-600 bg-violet-50 dark:bg-violet-900/20' : '']"><i class="ph ph-stack"></i> Dimensionais</button>
                     
                     <div v-if="loginData.perfil === 'admin'" class="my-4 border-t border-gray-100 dark:border-slate-800 pt-4">
                         <button @click="irParaInspecao" class="nav-item text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"><i class="ph ph-clipboard-text"></i> Fazer Análise</button>
+                        <button @click="irParaDimensionais" class="nav-item text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20"><i class="ph ph-stack"></i> Dimensionais</button>
                     </div>
                 </nav>
                 <div class="p-4 border-t border-gray-100 dark:border-slate-800"><button @click="logout" class="nav-item text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"><i class="ph ph-sign-out"></i> Sair</button></div>
@@ -277,7 +279,110 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- DIMENSIONAIS HISTORY TAB -->
+                <div v-if="adminTab === 'dimensionais'">
+                    <h2 class="text-2xl font-bold mb-6 hidden md:block">Histórico Dimensionais</h2>
+                    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden">
+                        <div class="p-4 border-b bg-gray-50 dark:bg-slate-900 dark:border-slate-800">
+                            <div class="flex flex-wrap gap-2 items-center">
+                                <input v-model="filtrosDimAdmin.lote" placeholder="Lote" class="input-clean py-1.5 text-xs w-20">
+                                <input v-model="filtrosDimAdmin.produto" placeholder="Produto" class="input-clean py-1.5 text-xs flex-1 md:w-32">
+                                <select v-model="filtrosDimAdmin.formatoId" class="input-clean py-1.5 text-xs w-28"><option value="">Formato: Todos</option><option v-for="fmt in cadastros.formatos" :value="fmt.id">{{ fmt.nome }}</option></select>
+                                <input type="date" v-model="filtrosDimAdmin.dataInicio" class="input-clean py-1.5 text-xs w-28">
+                                <input type="date" v-model="filtrosDimAdmin.dataFim" class="input-clean py-1.5 text-xs w-28">
+                                <select v-model="filtrosDimAdmin.resultado" class="input-clean py-1.5 text-xs w-24"><option value="">Status: Todos</option><option value="Aprovado">Aprovado</option><option value="Reprovado">Reprovado</option></select>
+                                <button @click="filtrosDimAdmin = { dataInicio:'', dataFim:'', produto:'', lote:'', resultado:'', formatoId:'' }" class="text-xs text-red-500 hover:underline">Limpar</button>
+                            </div>
+                        </div>
+                        <div class="md:hidden divide-y divide-gray-100 dark:divide-slate-800">
+                            <div v-for="rel in dimensionaisFiltrados" :key="rel.id" class="p-4 hover:bg-gray-50 dark:hover:bg-slate-800 transition">
+                                <div class="flex justify-between items-start mb-2">
+                                    <div><div class="text-sm font-bold text-gray-800 dark:text-white">{{ rel.produto }}</div><div class="text-xs text-gray-500">Lote: {{ rel.lote }} | {{ rel.formatoNome }}</div></div>
+                                    <span :class="['text-[10px] px-2 py-1 rounded-full font-bold', rel.resultado === 'Aprovado' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300']">{{ rel.resultado === 'Aprovado' ? 'OK' : 'FORA' }}</span>
+                                </div>
+                                <div class="flex justify-between text-xs text-gray-500 mb-3">
+                                    <span>{{ rel.nomeInspetor || rel.inspetor }}</span><span>{{ formatarData(rel.dataHora) }}</span>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button @click="dimSelecionadoModal = rel" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">Ver detalhes</button>
+                                    <button @click="removerDimensional(rel.id)" class="text-xs text-red-400 hover:underline ml-auto">Excluir</button>
+                                </div>
+                            </div>
+                            <div v-if="!dimensionaisFiltrados.length" class="p-8 text-center text-gray-400 text-sm">Nenhum registro encontrado.</div>
+                        </div>
+                        <div class="hidden md:block overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-50 dark:bg-slate-800 text-xs uppercase text-gray-500 dark:text-gray-400">
+                                    <tr><th class="p-3 text-left">Data</th><th class="p-3 text-left">Inspetor</th><th class="p-3 text-left">Produto / Lote</th><th class="p-3 text-left">Formato</th><th class="p-3 text-center">Resultado</th><th class="p-3"></th></tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-slate-800">
+                                    <tr v-for="rel in dimensionaisFiltrados" :key="rel.id" class="hover:bg-gray-50 dark:hover:bg-slate-800 transition cursor-pointer" @click="dimSelecionadoModal = rel">
+                                        <td class="p-3 text-gray-600 dark:text-gray-400 text-xs">{{ formatarData(rel.dataHora) }}</td>
+                                        <td class="p-3 font-medium text-gray-700 dark:text-gray-300">{{ rel.nomeInspetor || rel.inspetor }}</td>
+                                        <td class="p-3"><span class="font-bold text-gray-800 dark:text-white">{{ rel.produto }}</span><br><span class="text-xs text-gray-400">Lote: {{ rel.lote }}</span></td>
+                                        <td class="p-3 text-xs text-gray-500">{{ rel.formatoNome }}</td>
+                                        <td class="p-3 text-center"><span :class="['px-2 py-1 rounded-full text-xs font-bold', rel.resultado === 'Aprovado' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400']">{{ rel.resultado }}</span></td>
+                                        <td class="p-3 text-right"><button @click.stop="removerDimensional(rel.id)" class="text-gray-300 hover:text-red-500 p-1"><i class="ph ph-trash"></i></button></td>
+                                    </tr>
+                                    <tr v-if="!dimensionaisFiltrados.length"><td colspan="6" class="p-8 text-center text-gray-400">Nenhum registro encontrado.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </main>
+
+            <!-- MODAL DETALHE DIMENSIONAL -->
+            <div v-if="dimSelecionadoModal" class="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+                <div class="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl">
+                    <div class="p-4 border-b dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-900 rounded-t-2xl">
+                        <h3 class="font-bold dark:text-white flex items-center gap-2"><i class="ph-fill ph-stack text-violet-500"></i> Detalhes Dimensional</h3>
+                        <button @click="dimSelecionadoModal = null" class="text-gray-400 hover:text-gray-600"><i class="ph ph-x text-xl"></i></button>
+                    </div>
+                    <div class="p-6 overflow-y-auto flex-1">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mb-6 bg-violet-50 dark:bg-violet-900/20 p-4 rounded-lg">
+                            <div class="dark:text-gray-300"><b>Inspetor:</b> {{ dimSelecionadoModal.nomeInspetor || dimSelecionadoModal.inspetor }}</div>
+                            <div class="dark:text-gray-300"><b>Produto:</b> {{ dimSelecionadoModal.produto }}</div>
+                            <div class="dark:text-gray-300"><b>Lote:</b> {{ dimSelecionadoModal.lote }}</div>
+                            <div class="dark:text-gray-300"><b>Formato:</b> {{ dimSelecionadoModal.formatoNome }}</div>
+                            <div class="col-span-2 md:col-span-4 border-t pt-2 border-violet-200 dark:border-violet-800 dark:text-gray-300">
+                                <b>Resultado:</b> <span :class="dimSelecionadoModal.resultado === 'Aprovado' ? 'text-green-600 dark:text-green-400 font-bold' : 'text-red-600 dark:text-red-400 font-bold'">{{ dimSelecionadoModal.resultado }}</span>
+                            </div>
+                        </div>
+                        <div v-if="dimSelecionadoModal.espessuraDeclarada && dimSelecionadoModal.pecasEspessura?.length" class="mb-6">
+                            <div class="flex items-center gap-2 mb-3"><i class="ph-fill ph-stack text-violet-500"></i><span class="text-xs font-bold text-violet-600 dark:text-violet-400 uppercase">Espessura</span><span class="text-[10px] text-gray-400">Declarada: {{ dimSelecionadoModal.espessuraDeclarada }}mm | Range: {{ (dimSelecionadoModal.espessuraDeclarada * 0.95).toFixed(2) }} – {{ (dimSelecionadoModal.espessuraDeclarada * 1.05).toFixed(2) }}mm</span></div>
+                            <div class="space-y-3">
+                                <div v-for="(peca, idx) in dimSelecionadoModal.pecasEspessura" :key="idx" class="border dark:border-slate-800 rounded-lg overflow-hidden">
+                                    <div class="bg-violet-50 dark:bg-violet-900/20 px-3 py-2 flex justify-between items-center border-b dark:border-slate-800">
+                                        <span class="text-xs font-bold text-violet-700 dark:text-violet-300">{{ [peca.prensa ? 'Prensa ' + peca.prensa : '', peca.cavidade ? 'Cav ' + peca.cavidade : ''].filter(Boolean).join(' / ') || 'Peça ' + (idx+1) }}</span>
+                                        <span :class="['text-xs font-bold px-2 py-0.5 rounded-full', peca.media !== null && peca.media >= dimSelecionadoModal.espessuraDeclarada * 0.95 && peca.media <= dimSelecionadoModal.espessuraDeclarada * 1.05 ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400']">Média: {{ Number(peca.media).toFixed(2) }}mm</span>
+                                    </div>
+                                    <div class="p-3 flex flex-wrap gap-2">
+                                        <div v-for="(ponto, pi) in peca.pontos" :key="pi" class="relative">
+                                            <span class="absolute -top-2 left-1 text-[9px] bg-white dark:bg-slate-900 px-0.5 text-gray-400 font-bold z-10">P{{ pi+1 }}</span>
+                                            <div class="input-clean w-20 text-center font-bold text-sm pt-2 h-9 flex items-center justify-center text-gray-700 dark:text-gray-300">{{ Number(ponto).toFixed(2) }}mm</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-if="dimSelecionadoModal.medicoesTamanhoEsquadro?.length">
+                            <div class="flex items-center gap-2 mb-3"><i class="ph-fill ph-ruler text-orange-500"></i><span class="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase">Tamanho & Esquadro</span><span v-if="dimSelecionadoModal.limitesSnapshot?.tamanhoMin !== undefined" class="text-[10px] text-gray-400">Tam: {{ dimSelecionadoModal.limitesSnapshot.tamanhoMin }}–{{ dimSelecionadoModal.limitesSnapshot.tamanhoMax }} | Esq: {{ dimSelecionadoModal.limitesSnapshot.esquadroMin }}–{{ dimSelecionadoModal.limitesSnapshot.esquadroMax }}</span></div>
+                            <div class="space-y-3">
+                                <div v-for="(med, idx) in dimSelecionadoModal.medicoesTamanhoEsquadro" :key="idx" class="border dark:border-slate-800 rounded-lg overflow-hidden">
+                                    <div class="bg-orange-50 dark:bg-orange-900/20 px-3 py-2 border-b dark:border-slate-800"><span class="text-xs font-bold text-orange-700 dark:text-orange-300">Medição {{ idx+1 }}{{ med.retifica ? ' — Ret. ' + med.retifica : '' }}</span></div>
+                                    <div class="p-3 grid grid-cols-2 gap-3">
+                                        <div v-if="med.tamanho !== null && med.tamanho !== undefined" class="text-center"><div class="text-[10px] font-bold text-gray-400 uppercase mb-1">Tamanho</div><div :class="['input-clean font-bold text-sm text-center', dimSelecionadoModal.limitesSnapshot && med.tamanho >= dimSelecionadoModal.limitesSnapshot.tamanhoMin && med.tamanho <= dimSelecionadoModal.limitesSnapshot.tamanhoMax ? 'border-green-300 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'border-red-400 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400']">{{ med.tamanho }}mm</div></div>
+                                        <div v-if="med.esquadro !== null && med.esquadro !== undefined" class="text-center"><div class="text-[10px] font-bold text-gray-400 uppercase mb-1">Esquadro</div><div :class="['input-clean font-bold text-sm text-center', dimSelecionadoModal.limitesSnapshot && med.esquadro >= dimSelecionadoModal.limitesSnapshot.esquadroMin && med.esquadro <= dimSelecionadoModal.limitesSnapshot.esquadroMax ? 'border-green-300 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'border-red-400 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400']">{{ med.esquadro }}mm</div></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-4 border-t dark:border-slate-800 bg-gray-50 dark:bg-slate-950 rounded-b-2xl flex justify-end"><button @click="dimSelecionadoModal = null" class="btn-secondary">Fechar</button></div>
+                </div>
+            </div>
 
             <div v-if="relatorioSelecionado" class="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
                 <div class="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-5xl h-[90vh] flex flex-col shadow-2xl relative">
@@ -409,9 +514,13 @@
                     <button v-if="loginData.perfil === 'admin'" @click="voltarAdmin" class="mr-2 text-gray-500 hover:text-blue-500 transition-colors bg-gray-100 dark:bg-slate-800 p-1.5 rounded-lg" title="Voltar ao Painel">
                         <i class="ph-bold ph-arrow-left text-lg"></i>
                     </button>
-                    <i class="ph-fill ph-check-square text-blue-600 text-xl"></i> <span class="hidden sm:inline">Empeno Pro</span>
+                    <i class="ph-fill ph-check-square text-blue-600 text-xl"></i> <span class="hidden sm:inline">Empeno</span>
                 </div>
-                <div class="flex items-center gap-3"><div class="text-xs text-right hidden sm:block"><div class="font-bold text-gray-800 dark:text-white">{{ loginData.user }}</div><div class="text-gray-400 uppercase tracking-widest text-[9px]">{{ loginData.perfil === 'admin' ? 'Administrador' : 'Inspetor' }}</div></div><button @click="logout" class="text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full"><i class="ph ph-sign-out text-xl"></i></button></div>
+                <div class="flex items-center gap-2">
+                    <button @click="irParaDimensionais" class="text-xs bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1 hover:bg-violet-200 transition"><i class="ph-fill ph-stack"></i> <span class="hidden sm:inline">Dimensionais</span></button>
+                    <div class="text-xs text-right hidden sm:block"><div class="font-bold text-gray-800 dark:text-white">{{ loginData.nome || loginData.user }}</div><div class="text-gray-400 uppercase tracking-widest text-[9px]">{{ loginData.perfil === 'admin' ? 'Administrador' : 'Inspetor' }}</div></div>
+                    <button @click="logout" class="text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full"><i class="ph ph-sign-out text-xl"></i></button>
+                </div>
             </header>
 
             <div v-if="showStartModal" class="absolute inset-0 top-[60px] z-40 bg-gray-50 dark:bg-slate-950 flex flex-col p-4 overflow-y-auto">
@@ -583,6 +692,175 @@
                 <textarea class="w-full h-40 bg-gray-100 dark:bg-slate-950 dark:text-gray-300 p-3 text-xs font-mono rounded-lg mb-4 border dark:border-slate-800" readonly>{{ reportText }}</textarea>
                 <div class="grid grid-cols-2 gap-3"><button @click="copiarTexto" class="btn-secondary">Copiar</button><button @click="enviarZap" class="btn-whatsapp">WhatsApp</button></div>
                 <button @click="novaInspecaoLimpa" class="w-full mt-3 text-sm text-gray-500 dark:text-gray-400 underline">Fechar e Iniciar Nova</button>
+            </div>
+        </div>
+
+        <!-- ══ TELA DIMENSIONAIS ══ -->
+        <div v-else-if="currentView === 'dimensionais'" class="flex flex-col h-screen relative">
+            <header class="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 px-4 py-3 shadow-sm flex justify-between items-center z-20">
+                <div class="flex items-center gap-2 font-bold text-gray-800 dark:text-white">
+                    <button v-if="loginData.perfil === 'admin'" @click="voltarAdminDeDim" class="mr-2 text-gray-500 hover:text-violet-500 transition-colors bg-gray-100 dark:bg-slate-800 p-1.5 rounded-lg">
+                        <i class="ph-bold ph-arrow-left text-lg"></i>
+                    </button>
+                    <i class="ph-fill ph-stack text-violet-600 text-xl"></i>
+                    <span>Dimensionais</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="text-xs text-right hidden sm:block">
+                        <div class="font-bold text-gray-800 dark:text-white">{{ loginData.nome || loginData.user }}</div>
+                        <div class="text-gray-400 uppercase tracking-widest text-[9px]">{{ loginData.perfil === 'admin' ? 'Administrador' : 'Inspetor' }}</div>
+                    </div>
+                    <div v-if="salvandoDim" class="text-[10px] text-gray-400 flex items-center gap-1"><i class="ph ph-cloud-arrow-up animate-pulse"></i> Salvando...</div>
+                    <button @click="logout" class="text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full"><i class="ph ph-sign-out text-xl"></i></button>
+                </div>
+            </header>
+
+            <!-- Modal de início -->
+            <div v-if="showDimStartModal" class="absolute inset-0 top-[60px] z-40 bg-gray-50 dark:bg-slate-950 flex flex-col p-4 overflow-y-auto">
+                <div class="m-auto w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-800 p-6 space-y-4">
+                    <div class="text-center mb-4">
+                        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-violet-100 text-violet-600 dark:bg-violet-900 dark:text-violet-300 mb-2"><i class="ph-fill ph-stack text-2xl"></i></div>
+                        <h2 class="text-2xl font-bold dark:text-white">Análise Dimensional</h2>
+                        <p class="text-xs text-gray-500">Preencha os dados do lote para começar</p>
+                    </div>
+                    <div class="space-y-4 text-left">
+                        <div><label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Linha</label><select v-model="formDim.linha" class="input-clean w-full"><option value="">Selecione...</option><option v-for="l in cadastros.linhas" :value="l.nome">{{ l.nome }}</option></select></div>
+                        <div><label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Formato</label><select v-model="formDim.formatoId" class="input-clean w-full"><option value="">Selecione...</option><option v-for="f in cadastros.formatos" :value="f.id">{{ f.nome }}</option></select></div>
+                        <div class="relative">
+                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Produto</label>
+                            <input v-model="produtoSearchDim" @focus="mostrandoListaProdutosDim = true" @blur="setTimeout(() => mostrandoListaProdutosDim = false, 200)" placeholder="Buscar Produto..." class="input-clean w-full pl-8" :class="formDim.produto ? 'border-green-400 bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-400 font-bold' : ''">
+                            <i class="ph ph-magnifying-glass absolute left-2.5 top-[2.1rem] text-gray-400"></i>
+                            <div v-if="mostrandoListaProdutosDim" class="absolute top-full left-0 w-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xl rounded-lg mt-1 max-h-48 overflow-y-auto z-50">
+                                <div v-for="p in produtosFiltradosDim" @click="selecionarProdutoDim(p.nome)" class="p-2.5 text-sm hover:bg-violet-50 dark:hover:bg-violet-900/20 cursor-pointer border-b border-gray-50 dark:border-slate-800 text-gray-700 dark:text-gray-300">{{ p.nome }}</div>
+                            </div>
+                        </div>
+                        <div><label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Lote</label><input v-model="formDim.lote" @input="formDim.lote = formDim.lote.toUpperCase()" class="input-clean w-full uppercase font-bold" placeholder="EX: A123"></div>
+                    </div>
+                    <button @click="iniciarDimensionais" class="w-full py-4 text-lg mt-2 font-bold rounded-xl bg-violet-600 hover:bg-violet-700 text-white shadow-lg flex items-center justify-center gap-2 transition"><i class="ph-bold ph-play"></i> Iniciar Análise</button>
+                </div>
+            </div>
+
+            <!-- Formulário dimensional -->
+            <div v-else class="flex flex-col h-full overflow-hidden">
+                <!-- Mini-cabeçalho -->
+                <div class="bg-white dark:bg-slate-900 border-b dark:border-slate-800 p-3 shadow-sm z-10">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 items-center opacity-70 hover:opacity-100 transition-opacity">
+                        <select v-model="formDim.linha" @change="salvarDimRascunho" class="input-clean py-1.5 text-sm"><option value="">Linha...</option><option v-for="l in cadastros.linhas" :value="l.nome">{{ l.nome }}</option></select>
+                        <select v-model="formDim.formatoId" @change="salvarDimRascunho" class="input-clean py-1.5 text-sm"><option value="">Formato...</option><option v-for="f in cadastros.formatos" :value="f.id">{{ f.nome }}</option></select>
+                        <div class="font-bold text-sm text-gray-700 dark:text-gray-300 px-2 truncate">{{ formDim.produto || '—' }}</div>
+                        <input v-model="formDim.lote" @input="formDim.lote = formDim.lote.toUpperCase(); salvarDimRascunho()" class="input-clean py-1.5 text-sm uppercase font-bold" placeholder="LOTE">
+                    </div>
+                </div>
+
+                <main class="flex-1 overflow-y-auto p-4 bg-gray-100 dark:bg-slate-950 pb-32">
+                    <!-- Abas -->
+                    <div class="max-w-3xl mx-auto mb-4">
+                        <div class="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-1 flex gap-1 shadow-sm">
+                            <button @click="dimTab = 'espessura'" :class="['flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5', dimTab === 'espessura' ? 'bg-violet-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800']">
+                                <i class="ph-fill ph-stack"></i> Espessura
+                                <span v-if="resultadoEspessuraDim" :class="resultadoEspessuraDim === 'Aprovado' ? 'bg-green-400' : 'bg-red-400'" class="w-2 h-2 rounded-full"></span>
+                            </button>
+                            <button @click="dimTab = 'tamanho'" :class="['flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5', dimTab === 'tamanho' ? 'bg-orange-500 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800']">
+                                <i class="ph-fill ph-ruler"></i> Tam. & Esq.
+                                <span v-if="resultadoTEDim" :class="resultadoTEDim === 'Aprovado' ? 'bg-green-400' : 'bg-red-400'" class="w-2 h-2 rounded-full"></span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ABA ESPESSURA -->
+                    <div v-show="dimTab === 'espessura'" class="max-w-3xl mx-auto space-y-4">
+                        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 p-5">
+                            <h3 class="text-sm font-bold text-violet-600 dark:text-violet-400 uppercase mb-3 flex items-center gap-2"><i class="ph-fill ph-stack"></i> Espessura Declarada na Caixa (mm)</h3>
+                            <div class="flex items-center gap-4 flex-wrap">
+                                <input type="number" step="0.01" v-model.number="formDim.espessuraDeclarada" @change="salvarDimRascunho" class="input-clean text-center font-bold text-xl w-36" placeholder="ex: 10.00">
+                                <div v-if="formDim.espessuraDeclarada" class="flex gap-6 text-sm">
+                                    <div class="text-center"><div class="text-[10px] font-bold text-gray-400 uppercase">Mínimo (−5%)</div><div class="font-bold text-red-500">{{ espessuraDimMin?.toFixed(3) }}</div></div>
+                                    <div class="text-center"><div class="text-[10px] font-bold text-gray-400 uppercase">Máximo (+5%)</div><div class="font-bold text-red-500">{{ espessuraDimMax?.toFixed(3) }}</div></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-for="(peca, pidx) in formDim.pecasEspessura" :key="pidx" class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden">
+                            <div class="px-4 py-2.5 border-b bg-violet-50 dark:bg-violet-900/20 dark:border-slate-800 flex justify-between items-center">
+                                <div class="flex items-center gap-3">
+                                    <span class="font-bold text-sm text-violet-700 dark:text-violet-300">PEÇA {{ pidx + 1 }}</span>
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex items-center gap-1"><span class="text-[10px] font-bold text-gray-400 uppercase">Prensa</span><input v-model="peca.prensa" @change="salvarDimRascunho" class="input-clean py-0.5 px-2 text-xs font-bold w-14 text-center" placeholder="nº"></div>
+                                        <div class="flex items-center gap-1"><span class="text-[10px] font-bold text-gray-400 uppercase">Cav.</span><input v-model="peca.cavidade" @change="salvarDimRascunho" class="input-clean py-0.5 px-2 text-xs font-bold w-14 text-center" placeholder="nº"></div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span v-if="calcMediaPecaDim(peca) !== null" :class="['text-xs font-bold px-2.5 py-1 rounded-full', getStatusEspessuraDim(calcMediaPecaDim(peca)) === 'status-ok' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400']">Média: {{ calcMediaPecaDim(peca)?.toFixed(3) }}mm</span>
+                                    <button @click="removerPecaEspessuraDim(pidx)" class="text-red-400 hover:text-red-600"><i class="ph ph-trash"></i></button>
+                                </div>
+                            </div>
+                            <div class="p-4">
+                                <div class="text-[10px] font-bold text-gray-400 uppercase mb-2">Pontos de Medição</div>
+                                <div class="flex flex-wrap gap-2 mb-3">
+                                    <div v-for="(ponto, pontoidx) in peca.pontos" :key="pontoidx" class="relative">
+                                        <span class="absolute -top-1.5 left-1 text-[9px] bg-white dark:bg-slate-900 px-0.5 text-gray-400 font-bold z-10">P{{ pontoidx + 1 }}</span>
+                                        <div class="flex items-center gap-1">
+                                            <input type="number" step="0.001" v-model.number="peca.pontos[pontoidx]" @change="salvarDimRascunho" :class="['input-clean text-center font-bold w-24 pt-2', peca.pontos[pontoidx] !== null ? getStatusEspessuraDim(calcMediaPecaDim(peca)) : '']" placeholder="0.000">
+                                            <button v-if="peca.pontos.length > 1" @click="removerPontoDim(peca, pontoidx)" class="text-gray-300 hover:text-red-500"><i class="ph ph-x-circle text-sm"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button @click="adicionarPontoDim(peca)" class="text-xs text-violet-500 hover:text-violet-700 font-bold flex items-center gap-1"><i class="ph ph-plus-circle"></i> Adicionar ponto</button>
+                            </div>
+                        </div>
+                        <button @click="adicionarPecaEspessuraDim" class="w-full py-4 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl text-gray-400 hover:border-violet-500 hover:text-violet-500 transition font-medium bg-white dark:bg-slate-900"><i class="ph ph-plus-circle text-xl align-middle"></i> Adicionar Peça (Prensa / Cavidade)</button>
+                        <div v-if="resultadoEspessuraDim" :class="['rounded-xl p-4 text-center font-bold text-lg border', resultadoEspessuraDim === 'Aprovado' ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' : 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800']">
+                            <i :class="resultadoEspessuraDim === 'Aprovado' ? 'ph-fill ph-check-circle' : 'ph-fill ph-x-circle'" class="text-2xl align-middle mr-2"></i>Espessura: {{ resultadoEspessuraDim }}
+                        </div>
+                    </div>
+
+                    <!-- ABA TAMANHO & ESQUADRO -->
+                    <div v-show="dimTab === 'tamanho'" class="max-w-3xl mx-auto space-y-4">
+                        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 p-4">
+                            <div class="flex items-center gap-2 mb-3"><i class="ph-fill ph-ruler text-orange-500"></i><span class="text-sm font-bold text-orange-600 dark:text-orange-400">Range do Formato: {{ configDimAtiva.nome }}</span></div>
+                            <div v-if="configDimAtiva.tamanhoMin !== undefined" class="grid grid-cols-2 gap-3">
+                                <div class="bg-orange-50 dark:bg-orange-900/20 p-2.5 rounded-lg text-center border border-orange-100 dark:border-orange-900"><div class="text-[10px] font-bold text-gray-400 uppercase mb-0.5">Tamanho</div><div class="text-sm font-bold text-orange-700 dark:text-orange-300">{{ configDimAtiva.tamanhoMin }} – {{ configDimAtiva.tamanhoMax }} mm</div></div>
+                                <div class="bg-amber-50 dark:bg-amber-900/20 p-2.5 rounded-lg text-center border border-amber-100 dark:border-amber-900"><div class="text-[10px] font-bold text-gray-400 uppercase mb-0.5">Esquadro</div><div class="text-sm font-bold text-amber-700 dark:text-amber-300">{{ configDimAtiva.esquadroMin }} – {{ configDimAtiva.esquadroMax }} mm</div></div>
+                            </div>
+                            <p v-else class="text-xs text-gray-400 flex items-center gap-1.5"><i class="ph-fill ph-warning text-orange-400"></i> Ranges não configurados para este formato. Configure em Admin → Formatos.</p>
+                        </div>
+                        <div v-for="(med, idx) in formDim.medicoesTamanhoEsquadro" :key="idx" class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden">
+                            <div class="px-4 py-2.5 border-b bg-orange-50 dark:bg-orange-900/20 dark:border-slate-800 flex justify-between items-center">
+                                <div class="flex items-center gap-3">
+                                    <span class="font-bold text-sm text-orange-700 dark:text-orange-300">MEDIÇÃO {{ idx + 1 }}</span>
+                                    <div class="flex items-center gap-1.5"><span class="text-[10px] font-bold text-gray-400 uppercase">Retífica nº</span><input v-model="med.retifica" @change="salvarDimRascunho" class="input-clean py-0.5 px-2 text-xs font-bold w-16 text-center" placeholder="nº"><span class="text-[10px] text-gray-400">(informativo)</span></div>
+                                </div>
+                                <button @click="removerMedicaoTEDim(idx)" class="text-red-400 hover:text-red-600"><i class="ph ph-trash"></i></button>
+                            </div>
+                            <div class="p-4 grid grid-cols-2 gap-4">
+                                <div><label class="text-[10px] font-bold text-orange-500 uppercase mb-1.5 block">Tamanho (mm)</label><input type="number" step="0.01" v-model.number="med.tamanho" @change="salvarDimRascunho" :class="['input-clean text-center font-bold w-full text-lg', getStatusTamanhoDim(med.tamanho)]" placeholder="0.00"></div>
+                                <div><label class="text-[10px] font-bold text-amber-500 uppercase mb-1.5 block">Esquadro (mm)</label><input type="number" step="0.01" v-model.number="med.esquadro" @change="salvarDimRascunho" :class="['input-clean text-center font-bold w-full text-lg', getStatusEsquadroDim(med.esquadro)]" placeholder="0.00"></div>
+                            </div>
+                        </div>
+                        <button @click="adicionarMedicaoTEDim" class="w-full py-4 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl text-gray-400 hover:border-orange-500 hover:text-orange-500 transition font-medium bg-white dark:bg-slate-900"><i class="ph ph-plus-circle text-xl align-middle"></i> Adicionar Medição</button>
+                        <div v-if="resultadoTEDim" :class="['rounded-xl p-4 text-center font-bold text-lg border', resultadoTEDim === 'Aprovado' ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' : 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800']">
+                            <i :class="resultadoTEDim === 'Aprovado' ? 'ph-fill ph-check-circle' : 'ph-fill ph-x-circle'" class="text-2xl align-middle mr-2"></i>Tamanho & Esquadro: {{ resultadoTEDim }}
+                        </div>
+                    </div>
+                </main>
+
+                <div class="fixed bottom-2 left-0 right-0 flex justify-center z-50 pointer-events-none">
+                    <button @click="concluirDimensionais" class="pointer-events-auto bg-violet-600 hover:bg-violet-700 text-white rounded-full px-8 py-3 shadow-2xl flex items-center gap-3 transition-transform hover:scale-105 active:scale-95 border-2 border-white/20">
+                        <i class="ph-fill ph-check-circle text-2xl"></i><span class="font-bold text-lg">Concluir</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal relatório dimensional -->
+        <div v-if="dimReportText" class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md p-6 border dark:border-slate-800">
+                <h3 class="font-bold text-lg mb-4 text-violet-600 dark:text-violet-400">Dimensional Concluído!</h3>
+                <textarea class="w-full h-40 bg-gray-100 dark:bg-slate-950 dark:text-gray-300 p-3 text-xs font-mono rounded-lg mb-4 border dark:border-slate-800" readonly>{{ dimReportText }}</textarea>
+                <div class="grid grid-cols-2 gap-3">
+                    <button @click="navigator.clipboard.writeText(dimReportText)" class="btn-secondary">Copiar</button>
+                    <button @click="window.open('https://wa.me/?text=' + encodeURIComponent(dimReportText), '_blank')" class="btn-whatsapp">WhatsApp</button>
+                </div>
+                <button @click="novoDimLimpo" class="w-full mt-3 text-sm text-gray-500 dark:text-gray-400 underline">Fechar e Iniciar Nova</button>
             </div>
         </div>
 
