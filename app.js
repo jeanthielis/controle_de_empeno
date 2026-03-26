@@ -29,7 +29,242 @@ createApp({
         
         const tipoGrafico = ref('fechamento96');
         const showStartModal = ref(true);
-        const inspectorTab = ref('empeno'); // 'empeno' | 'espessura' | 'tamanho'
+        const inspectorTab = ref('empeno'); // 'empeno' only now
+
+        // ─── DIMENSIONAIS ─────────────────────────────────────────────────────────
+        const showDimStartModal = ref(true);
+        const currentDimId = ref(null);
+        const salvandoDim = ref(false);
+        const dimReportText = ref('');
+        const dimSelecionado = ref(null);
+        const filtrosDim = ref({ dataInicio: '', dataFim: '', produto: '', lote: '', resultado: '', formatoId: '' });
+        const produtoSearchDim = ref('');
+        const mostrandoListaProdutosDim = ref(false);
+
+        const formDim = ref({
+            linha: '', formatoId: '', produto: '', lote: '',
+            espessuraDeclarada: null,
+            pecasEspessura: [],
+            medicoesTamanhoEsquadro: []
+        });
+
+        const configDimAtiva = computed(() =>
+            cadastros.value.formatos.find(f => f.id === formDim.value.formatoId) ||
+            { nome: '...', tamanhoMin: undefined, tamanhoMax: undefined, esquadroMin: undefined, esquadroMax: undefined }
+        );
+
+        const selecionarProdutoDim = (nome) => { formDim.value.produto = nome; produtoSearchDim.value = nome; mostrandoListaProdutosDim.value = false; salvarDimRascunho(); };
+        const produtosFiltradosDim = computed(() => {
+            if (!produtoSearchDim.value) return cadastros.value.produtos;
+            return cadastros.value.produtos.filter(p => p.nome.toLowerCase().includes(produtoSearchDim.value.toLowerCase()));
+        });
+
+        const iniciarDimensionais = () => {
+            if (!formDim.value.linha || !formDim.value.formatoId || !formDim.value.produto || !formDim.value.lote) {
+                notify('Atenção', 'Preencha todos os campos para iniciar.', 'erro'); return;
+            }
+            showDimStartModal.value = false; salvarDimRascunho();
+        };
+
+        const irParaDimensionais = () => {
+            currentView.value = 'dimensionais';
+            mobileMenuOpen.value = false;
+            showDimStartModal.value = true;
+        };
+        const voltarAdminDeDim = () => { currentView.value = 'admin'; adminTab.value = 'dashboard'; };
+
+        // Espessura nos dimensionais
+        const espessuraDimMin = computed(() => formDim.value.espessuraDeclarada ? +(formDim.value.espessuraDeclarada * 0.95).toFixed(4) : null);
+        const espessuraDimMax = computed(() => formDim.value.espessuraDeclarada ? +(formDim.value.espessuraDeclarada * 1.05).toFixed(4) : null);
+
+        const calcMediaPecaDim = (peca) => {
+            const vals = (peca.pontos || []).filter(v => v !== null && v !== '' && !isNaN(parseFloat(v)));
+            if (!vals.length) return null;
+            return vals.reduce((a, b) => a + parseFloat(b), 0) / vals.length;
+        };
+        const getStatusEspessuraDim = (media) => {
+            if (media === null || media === undefined || espessuraDimMin.value === null) return '';
+            return (media >= espessuraDimMin.value && media <= espessuraDimMax.value) ? 'status-ok' : 'status-bad';
+        };
+        const adicionarPecaEspessuraDim = () => { formDim.value.pecasEspessura.push({ prensa: '', cavidade: '', pontos: [null] }); salvarDimRascunho(); };
+        const removerPecaEspessuraDim = (idx) => { formDim.value.pecasEspessura.splice(idx, 1); salvarDimRascunho(); };
+        const adicionarPontoDim = (peca) => { peca.pontos.push(null); salvarDimRascunho(); };
+        const removerPontoDim = (peca, pidx) => { if (peca.pontos.length > 1) { peca.pontos.splice(pidx, 1); salvarDimRascunho(); } };
+
+        const resultadoEspessuraDim = computed(() => {
+            if (!formDim.value.espessuraDeclarada || !formDim.value.pecasEspessura.length) return null;
+            const medias = formDim.value.pecasEspessura.map(p => calcMediaPecaDim(p)).filter(m => m !== null);
+            if (!medias.length) return null;
+            return medias.every(m => m >= espessuraDimMin.value && m <= espessuraDimMax.value) ? 'Aprovado' : 'Reprovado';
+        });
+
+        // Tamanho & Esquadro nos dimensionais
+        const getStatusTamanhoDim = (valor) => {
+            if (valor === null || valor === '' || valor === undefined) return '';
+            const fmt = configDimAtiva.value;
+            if (fmt.tamanhoMin === undefined) return '';
+            return (parseFloat(valor) >= fmt.tamanhoMin && parseFloat(valor) <= fmt.tamanhoMax) ? 'status-ok' : 'status-bad';
+        };
+        const getStatusEsquadroDim = (valor) => {
+            if (valor === null || valor === '' || valor === undefined) return '';
+            const fmt = configDimAtiva.value;
+            if (fmt.esquadroMin === undefined) return '';
+            return (parseFloat(valor) >= fmt.esquadroMin && parseFloat(valor) <= fmt.esquadroMax) ? 'status-ok' : 'status-bad';
+        };
+        const adicionarMedicaoTEDim = () => { formDim.value.medicoesTamanhoEsquadro.push({ retifica: '', tamanho: null, esquadro: null }); salvarDimRascunho(); };
+        const removerMedicaoTEDim = (idx) => { formDim.value.medicoesTamanhoEsquadro.splice(idx, 1); salvarDimRascunho(); };
+        const resultadoTEDim = computed(() => {
+            const meds = formDim.value.medicoesTamanhoEsquadro;
+            if (!meds.length) return null;
+            for (const m of meds) {
+                if (getStatusTamanhoDim(m.tamanho) === 'status-bad') return 'Reprovado';
+                if (getStatusEsquadroDim(m.esquadro) === 'status-bad') return 'Reprovado';
+            }
+            return meds.some(m => m.tamanho !== null || m.esquadro !== null) ? 'Aprovado' : null;
+        });
+
+        // Detectores
+        const temDadosEspessuraDim = computed(() => {
+            if (!formDim.value.espessuraDeclarada) return false;
+            return formDim.value.pecasEspessura.some(p => (p.pontos||[]).some(v => v !== null && v !== '' && !isNaN(parseFloat(v))));
+        });
+        const temDadosTEDim = computed(() =>
+            formDim.value.medicoesTamanhoEsquadro.some(m => (m.tamanho !== null && m.tamanho !== '') || (m.esquadro !== null && m.esquadro !== ''))
+        );
+
+        // Abas dimensionais
+        const dimTab = ref('espessura'); // 'espessura' | 'tamanho'
+
+        // Salvar rascunho dimensional
+        const salvarDimRascunho = async () => {
+            if (!formDim.value.formatoId || showDimStartModal.value) return;
+            salvandoDim.value = true;
+            let resultado = 'Aprovado';
+            if (resultadoEspessuraDim.value === 'Reprovado') resultado = 'Reprovado';
+            if (resultadoTEDim.value === 'Reprovado') resultado = 'Reprovado';
+            const fmt = configDimAtiva.value;
+            const dados = {
+                tipo: 'dimensional',
+                inspetor: loginData.value.user,
+                nomeInspetor: loginData.value.nome || loginData.value.user,
+                dataHora: new Date(),
+                linha: formDim.value.linha,
+                produto: formDim.value.produto,
+                formatoId: formDim.value.formatoId,
+                formatoNome: fmt.nome,
+                lote: formDim.value.lote ? formDim.value.lote.toUpperCase() : '',
+                resultado,
+                limitesSnapshot: {
+                    tamanhoMin: fmt.tamanhoMin, tamanhoMax: fmt.tamanhoMax,
+                    esquadroMin: fmt.esquadroMin, esquadroMax: fmt.esquadroMax
+                },
+                espessuraDeclarada: temDadosEspessuraDim.value ? formDim.value.espessuraDeclarada : null,
+                pecasEspessura: temDadosEspessuraDim.value
+                    ? formDim.value.pecasEspessura
+                        .filter(p => (p.pontos||[]).some(v => v !== null && v !== ''))
+                        .map(p => ({ prensa: p.prensa, cavidade: p.cavidade, pontos: p.pontos.filter(v => v !== null && v !== ''), media: calcMediaPecaDim(p) }))
+                    : [],
+                medicoesTamanhoEsquadro: temDadosTEDim.value
+                    ? formDim.value.medicoesTamanhoEsquadro.filter(m => (m.tamanho !== null && m.tamanho !== '') || (m.esquadro !== null && m.esquadro !== ''))
+                    : [],
+                status: 'rascunho'
+            };
+            try {
+                if (currentDimId.value) { await updateDoc(doc(db, 'dimensionais', currentDimId.value), dados); }
+                else { const r = await addDoc(collection(db, 'dimensionais'), dados); currentDimId.value = r.id; }
+            } catch(e) { console.error(e); }
+            finally { setTimeout(() => salvandoDim.value = false, 500); }
+        };
+
+        // Concluir dimensional
+        const concluirDimensionais = async () => {
+            if (!formDim.value.linha || !formDim.value.produto || !formDim.value.formatoId || !formDim.value.lote) {
+                notify('Erro', 'Cabeçalho incompleto.', 'erro'); return;
+            }
+            if (!temDadosEspessuraDim.value && !temDadosTEDim.value) {
+                notify('Atenção', 'Nenhuma medição preenchida.', 'erro'); return;
+            }
+            await salvarDimRascunho();
+            if (currentDimId.value) await updateDoc(doc(db, 'dimensionais', currentDimId.value), { status: 'finalizado' });
+
+            const now = new Date();
+            const fmt = configDimAtiva.value;
+            const dataHora = `${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR').slice(0,5)}`;
+            let resultadoFinal = (resultadoEspessuraDim.value === 'Reprovado' || resultadoTEDim.value === 'Reprovado') ? 'REPROVADO ❌' : 'APROVADO ✅';
+
+            let txt = `*RELATÓRIO DE EMPENO*\n`;
+            txt += `*Data:* ${dataHora}\n`;
+            txt += `*Responsável:* ${loginData.value.nome || loginData.value.user}\n`;
+            txt += `*Linha:* ${formDim.value.linha}\n`;
+            txt += `*Produto:* ${formDim.value.produto}\n`;
+            txt += `*Formato:* ${fmt.nome}\n`;
+            txt += `*Lote:* ${formDim.value.lote}\n`;
+
+            if (temDadosEspessuraDim.value) {
+                txt += `\nRange Espessura:(${espessuraDimMin.value?.toFixed(2)} a ${espessuraDimMax.value?.toFixed(2)})\n`;
+                formDim.value.pecasEspessura.forEach(p => {
+                    const pontosValidos = (p.pontos||[]).filter(v => v !== null && v !== '' && !isNaN(parseFloat(v)));
+                    if (!pontosValidos.length) return;
+                    const med = calcMediaPecaDim(p);
+                    const ok = med !== null && getStatusEspessuraDim(med) === 'status-ok';
+                    const id = [p.prensa ? `Prensa ${p.prensa}` : '', p.cavidade ? `Cav ${p.cavidade}` : ''].filter(Boolean).join(' / ') || 'Peça';
+                    txt += `\n*${id}*\n`;
+                    pontosValidos.forEach((v, pi) => { txt += `Ponto ${pi+1}: ${parseFloat(v).toFixed(2)}mm\n`; });
+                    txt += `${ok ? '🟢' : '🔴'} Média: ${med !== null ? med.toFixed(2) : '-'}mm\n`;
+                });
+            }
+
+            if (temDadosTEDim.value) {
+                txt += `\nRange Tamanho:(${fmt.tamanhoMin} a ${fmt.tamanhoMax})\n`;
+                txt += `Range Esquadro:(${fmt.esquadroMin} a ${fmt.esquadroMax})\n`;
+                let n = 0;
+                formDim.value.medicoesTamanhoEsquadro.forEach(m => {
+                    const tt = m.tamanho !== null && m.tamanho !== '';
+                    const te = m.esquadro !== null && m.esquadro !== '';
+                    if (!tt && !te) return;
+                    n++;
+                    txt += `\n*Medição ${n}${m.retifica ? ' — Ret. ' + m.retifica : ''}*\n`;
+                    if (tt) { const ok = getStatusTamanhoDim(m.tamanho) === 'status-ok'; txt += `${ok ? '🟢' : '🔴'} Tamanho: ${m.tamanho}mm\n`; }
+                    if (te) { const ok = getStatusEsquadroDim(m.esquadro) === 'status-ok'; txt += `${ok ? '🟢' : '🔴'} Esquadro: ${m.esquadro}mm\n`; }
+                });
+            }
+
+            txt += `\n*━━━━━━━━━━━━━━━━━━━━*\n*RESULTADO: ${resultadoFinal}*\n*━━━━━━━━━━━━━━━━━━━━*`;
+            dimReportText.value = txt;
+            notify('Sucesso', 'Dimensional concluído!', 'sucesso');
+        };
+
+        const novoDimLimpo = () => {
+            dimReportText.value = ''; currentDimId.value = null;
+            formDim.value = { linha: '', formatoId: '', produto: '', lote: '', espessuraDeclarada: null, pecasEspessura: [], medicoesTamanhoEsquadro: [] };
+            produtoSearchDim.value = ''; showDimStartModal.value = true; dimTab.value = 'espessura';
+        };
+
+        // Histórico dimensionais no admin
+        const dimSelecionadoModal = ref(null);
+        const filtrosDimAdmin = ref({ dataInicio: '', dataFim: '', produto: '', lote: '', resultado: '', formatoId: '' });
+        const dimensionaisFiltrados = computed(() => {
+            return (cadastros.value.dimensionais || []).filter(item => {
+                const matchProduto = filtrosDimAdmin.value.produto ? item.produto?.toLowerCase().includes(filtrosDimAdmin.value.produto.toLowerCase()) : true;
+                const matchLote = filtrosDimAdmin.value.lote ? item.lote?.toLowerCase().includes(filtrosDimAdmin.value.lote.toLowerCase()) : true;
+                const matchResultado = filtrosDimAdmin.value.resultado ? item.resultado === filtrosDimAdmin.value.resultado : true;
+                const matchFormatoId = filtrosDimAdmin.value.formatoId ? item.formatoId === filtrosDimAdmin.value.formatoId : true;
+                let matchData = true;
+                if (filtrosDimAdmin.value.dataInicio && filtrosDimAdmin.value.dataFim) {
+                    const dataItem = item.dataHora?.seconds ? new Date(item.dataHora.seconds * 1000) : new Date(item.dataHora);
+                    const inicio = new Date(filtrosDimAdmin.value.dataInicio + 'T00:00:00');
+                    const fim = new Date(filtrosDimAdmin.value.dataFim + 'T23:59:59');
+                    matchData = dataItem >= inicio && dataItem <= fim;
+                }
+                return matchProduto && matchLote && matchResultado && matchFormatoId && matchData;
+            }).sort((a,b) => (b.dataHora?.seconds||0) - (a.dataHora?.seconds||0));
+        });
+        const removerDimensional = async (id) => {
+            if (confirm('Excluir este registro dimensional?')) {
+                try { await deleteDoc(doc(db, 'dimensionais', id)); notify('Excluído', 'Registro removido.', 'sucesso'); }
+                catch(e) { notify('Erro', 'Falha ao excluir.', 'erro'); }
+            }
+        };
         
         const filtros = ref({ dataInicio: '', dataFim: '', produto: '', lote: '', posFolga: '', resultado: '', formatoId: '' });
 
@@ -52,7 +287,7 @@ createApp({
         const filtroAdminProdutos = ref(''); 
         // Atualizado para receber o perfil
         const novoUsuarioForm = ref({ nome: '', matricula: '', perfil: 'inspetor' });
-        const cadastros = ref({ formatos: [], produtos: [], linhas: [], inspecoes: [], usuarios: [] });
+        const cadastros = ref({ formatos: [], produtos: [], linhas: [], inspecoes: [], usuarios: [], dimensionais: [] });
 
         const currentInspectionId = ref(null);
         const produtoSearch = ref('');
@@ -419,7 +654,7 @@ createApp({
                     } else { 
                         currentView.value = 'inspector'; 
                         if(form.value.pecas.length === 0) adicionarPeca(); showStartModal.value = true; 
-                    } 
+                    }
                     notify('Bem-vindo', `Olá, ${usuarioEncontrado.nome}`, 'sucesso'); 
                 } else { 
                     notify('Erro', 'Incorreto.', 'erro'); 
@@ -623,6 +858,11 @@ createApp({
                 });
             }
 
+            // ── RESULTADO FINAL ──
+            txt += `\n*━━━━━━━━━━━━━━━━━━━━*\n`;
+            txt += `*RESULTADO: ${resultadoFinal}*\n`;
+            txt += `*━━━━━━━━━━━━━━━━━━━━*`;
+
             reportText.value = txt;
             notify('Sucesso', 'Relatório gerado!', 'sucesso');
         };
@@ -748,6 +988,9 @@ createApp({
                 cadastros.value.inspecoes = s.docs.map(d=>({id:d.id,...d.data()}));
                 nextTick(() => { if (adminTab.value === 'dashboard') updateCharts(); });
             });
+            onSnapshot(query(collection(db, "dimensionais"), orderBy("dataHora", "desc")), s => {
+                cadastros.value.dimensionais = s.docs.map(d=>({id:d.id,...d.data()}));
+            });
         });
 
         watch(() => [filtrosGrafico.value.formato, filtrosGrafico.value.data, adminTab.value, tipoGrafico.value], () => { 
@@ -764,15 +1007,25 @@ createApp({
             formatarData, copiarTexto, enviarZap, stats, novoUsuarioForm, cadastrarUsuario, setFiltroRapido,
             produtoSearch, produtosFiltrados, selecionarProduto, mostrandoListaProdutos, filtroAdminProdutos, produtosAdminFiltrados,
             isDarkMode, toggleDarkMode, filtrosGrafico, showStartModal, iniciarAnalise, tipoGrafico,
-            // Detectores de dados
+            // Detectores empeno
             temDadosEmpeno, temDadosEspessura, temDadosTamanhoEsquadro,
-            // Espessura
+            // Empeno tabs (mantido só empeno)
             inspectorTab, espessuraMin, espessuraMax,
             calcMediaPecaEspessura, getStatusEspessura, resultadoEspessura,
             adicionarPecaEspessura, removerPecaEspessura, adicionarPontoNaPeca, removerPontoDaPeca,
-            // Tamanho & Esquadro
             getStatusTamanho, getStatusEsquadro, adicionarMedicaoTE, removerMedicaoTE, resultadoTamanhoEsquadro,
-            configAtiva
+            configAtiva,
+            // ── DIMENSIONAIS ──
+            formDim, configDimAtiva, showDimStartModal, salvandoDim, dimReportText, dimTab,
+            currentDimId, produtoSearchDim, mostrandoListaProdutosDim, produtosFiltradosDim,
+            selecionarProdutoDim, iniciarDimensionais, irParaDimensionais, voltarAdminDeDim,
+            espessuraDimMin, espessuraDimMax, calcMediaPecaDim, getStatusEspessuraDim,
+            adicionarPecaEspessuraDim, removerPecaEspessuraDim, adicionarPontoDim, removerPontoDim,
+            resultadoEspessuraDim, temDadosEspessuraDim,
+            getStatusTamanhoDim, getStatusEsquadroDim, adicionarMedicaoTEDim, removerMedicaoTEDim,
+            resultadoTEDim, temDadosTEDim,
+            salvarDimRascunho, concluirDimensionais, novoDimLimpo,
+            dimSelecionadoModal, filtrosDimAdmin, dimensionaisFiltrados, removerDimensional
         };
     }
 }).mount('#app');
