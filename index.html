@@ -289,7 +289,110 @@
                                 <div class="col-span-2 md:col-span-4 mt-2 border-t pt-2 border-blue-200 dark:border-blue-800 dark:text-gray-300"><b>Resultado:</b> <span :class="relatorioSelecionado.resultado === 'Aprovado' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400 font-bold'">{{ relatorioSelecionado.resultado }}</span></div>
                             </div>
                             <div class="flex justify-between items-center mb-2"><h4 class="font-bold dark:text-white">Medições</h4><button id="btn-print-action" @click="baixarPrintRelatorio" class="text-blue-600 dark:text-blue-400 hover:underline text-xs flex items-center gap-1" data-html2canvas-ignore><i class="ph-bold ph-image"></i> Baixar Imagem</button></div>
-                            <div class="space-y-4"><div v-for="(peca, idx) in relatorioSelecionado.pecas" class="border dark:border-slate-800 p-3 rounded-lg"><div class="font-bold text-xs text-gray-500 mb-2">PEÇA {{ idx + 1 }}</div><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><span class="text-[10px] uppercase font-bold text-gray-400">Lateral</span><div class="grid grid-cols-4 gap-2 mt-1"><div v-for="(v, k) in peca.laterais" class="relative"><input type="number" step="0.01" v-model.number="peca.laterais[k]" :disabled="loginData.perfil === 'analista'" :class="[getStatusRelatorio(relatorioSelecionado, peca.laterais[k], 'lateral') ? 'border-gray-200 dark:border-slate-700' : 'border-red-500 bg-red-50 dark:bg-red-900/20', loginData.perfil === 'analista' ? 'bg-gray-100 text-gray-500' : '']" class="input-clean text-center font-bold h-8 text-sm w-full"><span class="absolute -top-2 left-1 text-[8px] bg-white dark:bg-slate-900 px-1 text-gray-400">{{k}}</span></div></div></div><div><span class="text-[10px] uppercase font-bold text-gray-400">Central</span><div class="grid grid-cols-2 gap-2 mt-1"><div v-for="(v, k) in peca.centrais" class="relative"><input type="number" step="0.01" v-model.number="peca.centrais[k]" :disabled="loginData.perfil === 'analista'" :class="[getStatusRelatorio(relatorioSelecionado, peca.centrais[k], 'central') ? 'border-gray-200 dark:border-slate-700' : 'border-red-500 bg-red-50 dark:bg-red-900/20', loginData.perfil === 'analista' ? 'bg-gray-100 text-gray-500' : '']" class="input-clean text-center font-bold h-8 text-sm w-full"><span class="absolute -top-2 left-1 text-[8px] bg-white dark:bg-slate-900 px-1 text-gray-400">C{{k}}</span></div></div></div></div></div></div>
+
+                            <!-- EMPENO -->
+                            <div v-if="relatorioSelecionado.pecas && relatorioSelecionado.pecas.length" class="mb-6">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <i class="ph-fill ph-arrows-out-line-vertical text-blue-500"></i>
+                                    <span class="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Empeno</span>
+                                    <div v-if="relatorioSelecionado.limitesSnapshot" class="text-[10px] text-gray-400 ml-2">
+                                        Lat: {{ relatorioSelecionado.limitesSnapshot.latMin }} a {{ relatorioSelecionado.limitesSnapshot.latMax }} |
+                                        Cent: {{ relatorioSelecionado.limitesSnapshot.centMin }} a {{ relatorioSelecionado.limitesSnapshot.centMax }}
+                                    </div>
+                                </div>
+                                <div class="space-y-3">
+                                    <div v-for="(peca, idx) in relatorioSelecionado.pecas" :key="idx" class="border dark:border-slate-800 p-3 rounded-lg">
+                                        <div class="font-bold text-xs text-gray-500 dark:text-gray-400 mb-2">PEÇA {{ idx + 1 }}</div>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <span class="text-[10px] uppercase font-bold text-gray-400">Lateral</span>
+                                                <div class="grid grid-cols-4 gap-2 mt-1">
+                                                    <div v-for="(v, k) in peca.laterais" :key="k" class="relative">
+                                                        <input type="number" step="0.01" v-model.number="peca.laterais[k]" :disabled="loginData.perfil === 'analista'" :class="[getStatusRelatorio(relatorioSelecionado, peca.laterais[k], 'lateral') ? 'border-gray-200 dark:border-slate-700' : 'border-red-500 bg-red-50 dark:bg-red-900/20', loginData.perfil === 'analista' ? 'bg-gray-100 dark:bg-slate-800 text-gray-500' : '']" class="input-clean text-center font-bold h-8 text-sm w-full">
+                                                        <span class="absolute -top-2 left-1 text-[8px] bg-white dark:bg-slate-900 px-1 text-gray-400">{{k}}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <span class="text-[10px] uppercase font-bold text-gray-400">Central</span>
+                                                <div class="grid grid-cols-2 gap-2 mt-1">
+                                                    <div v-for="(v, k) in peca.centrais" :key="k" class="relative">
+                                                        <input type="number" step="0.01" v-model.number="peca.centrais[k]" :disabled="loginData.perfil === 'analista'" :class="[getStatusRelatorio(relatorioSelecionado, peca.centrais[k], 'central') ? 'border-gray-200 dark:border-slate-700' : 'border-red-500 bg-red-50 dark:bg-red-900/20', loginData.perfil === 'analista' ? 'bg-gray-100 dark:bg-slate-800 text-gray-500' : '']" class="input-clean text-center font-bold h-8 text-sm w-full">
+                                                        <span class="absolute -top-2 left-1 text-[8px] bg-white dark:bg-slate-900 px-1 text-gray-400">C{{k}}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ESPESSURA -->
+                            <div v-if="relatorioSelecionado.espessuraDeclarada && relatorioSelecionado.pecasEspessura && relatorioSelecionado.pecasEspessura.length" class="mb-6">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <i class="ph-fill ph-stack text-violet-500"></i>
+                                    <span class="text-xs font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider">Espessura</span>
+                                    <span class="text-[10px] text-gray-400 ml-2">
+                                        Declarada: {{ relatorioSelecionado.espessuraDeclarada }}mm |
+                                        Range: {{ (relatorioSelecionado.espessuraDeclarada * 0.95).toFixed(2) }} – {{ (relatorioSelecionado.espessuraDeclarada * 1.05).toFixed(2) }}mm
+                                    </span>
+                                </div>
+                                <div class="space-y-3">
+                                    <div v-for="(peca, idx) in relatorioSelecionado.pecasEspessura" :key="idx" class="border dark:border-slate-800 rounded-lg overflow-hidden">
+                                        <div class="bg-violet-50 dark:bg-violet-900/20 px-3 py-2 flex justify-between items-center border-b dark:border-slate-800">
+                                            <span class="text-xs font-bold text-violet-700 dark:text-violet-300">
+                                                {{ [peca.prensa ? 'Prensa ' + peca.prensa : '', peca.cavidade ? 'Cav ' + peca.cavidade : ''].filter(Boolean).join(' / ') || ('Peça ' + (idx + 1)) }}
+                                            </span>
+                                            <span :class="['text-xs font-bold px-2 py-0.5 rounded-full', peca.media !== null && peca.media >= relatorioSelecionado.espessuraDeclarada * 0.95 && peca.media <= relatorioSelecionado.espessuraDeclarada * 1.05 ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400']">
+                                                Média: {{ peca.media !== null && peca.media !== undefined ? Number(peca.media).toFixed(2) : '-' }}mm
+                                            </span>
+                                        </div>
+                                        <div class="p-3 flex flex-wrap gap-2">
+                                            <div v-for="(ponto, pi) in peca.pontos" :key="pi" class="relative">
+                                                <span class="absolute -top-2 left-1 text-[9px] bg-white dark:bg-slate-900 px-0.5 text-gray-400 font-bold z-10">P{{ pi + 1 }}</span>
+                                                <div :class="['input-clean w-20 text-center font-bold text-sm pt-1.5 h-9 flex items-center justify-center', peca.media !== null && peca.media >= relatorioSelecionado.espessuraDeclarada * 0.95 && peca.media <= relatorioSelecionado.espessuraDeclarada * 1.05 ? 'border-green-300 bg-green-50 dark:bg-green-900/20 dark:border-green-800 text-green-700 dark:text-green-400' : 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800 text-red-700 dark:text-red-400']">
+                                                    {{ ponto !== null && ponto !== '' ? Number(ponto).toFixed(2) + 'mm' : '—' }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- TAMANHO & ESQUADRO -->
+                            <div v-if="relatorioSelecionado.medicoesTamanhoEsquadro && relatorioSelecionado.medicoesTamanhoEsquadro.length" class="mb-2">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <i class="ph-fill ph-ruler text-orange-500"></i>
+                                    <span class="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider">Tamanho & Esquadro</span>
+                                    <span v-if="relatorioSelecionado.limitesSnapshot && relatorioSelecionado.limitesSnapshot.tamanhoMin !== undefined" class="text-[10px] text-gray-400 ml-2">
+                                        Tam: {{ relatorioSelecionado.limitesSnapshot.tamanhoMin }} – {{ relatorioSelecionado.limitesSnapshot.tamanhoMax }} |
+                                        Esq: {{ relatorioSelecionado.limitesSnapshot.esquadroMin }} – {{ relatorioSelecionado.limitesSnapshot.esquadroMax }}
+                                    </span>
+                                </div>
+                                <div class="space-y-3">
+                                    <div v-for="(med, idx) in relatorioSelecionado.medicoesTamanhoEsquadro" :key="idx" class="border dark:border-slate-800 rounded-lg overflow-hidden">
+                                        <div class="bg-orange-50 dark:bg-orange-900/20 px-3 py-2 border-b dark:border-slate-800">
+                                            <span class="text-xs font-bold text-orange-700 dark:text-orange-300">
+                                                Medição {{ idx + 1 }}{{ med.retifica ? ' — Ret. ' + med.retifica : '' }}
+                                            </span>
+                                        </div>
+                                        <div class="p-3 grid grid-cols-2 gap-3">
+                                            <div v-if="med.tamanho !== null && med.tamanho !== undefined" class="text-center">
+                                                <div class="text-[10px] font-bold text-gray-400 uppercase mb-1">Tamanho</div>
+                                                <div :class="['input-clean font-bold text-sm text-center', getStatusRelatorio(relatorioSelecionado, med.tamanho, 'tamanho') ? 'border-green-300 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'border-red-400 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400']">
+                                                    {{ med.tamanho }}mm
+                                                </div>
+                                            </div>
+                                            <div v-if="med.esquadro !== null && med.esquadro !== undefined" class="text-center">
+                                                <div class="text-[10px] font-bold text-gray-400 uppercase mb-1">Esquadro</div>
+                                                <div :class="['input-clean font-bold text-sm text-center', getStatusRelatorio(relatorioSelecionado, med.esquadro, 'esquadro') ? 'border-green-300 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'border-red-400 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400']">
+                                                    {{ med.esquadro }}mm
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="p-4 border-t dark:border-slate-800 bg-gray-50 dark:bg-slate-950 rounded-b-2xl flex justify-end gap-3" data-html2canvas-ignore>
                             <button @click="relatorioSelecionado = null" class="btn-secondary">{{ loginData.perfil === 'analista' ? 'Fechar' : 'Cancelar' }}</button>
