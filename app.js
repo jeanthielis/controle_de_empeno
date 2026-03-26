@@ -470,7 +470,12 @@ createApp({
             if (!form.value.formatoId || showStartModal.value) return;
             salvandoAuto.value = true;
 
-            const limitesSnapshot = { latMin: configAtiva.value.latMin, latMax: configAtiva.value.latMax, centMin: configAtiva.value.centMin, centMax: configAtiva.value.centMax };
+            const limitesSnapshot = {
+                latMin: configAtiva.value.latMin, latMax: configAtiva.value.latMax,
+                centMin: configAtiva.value.centMin, centMax: configAtiva.value.centMax,
+                tamanhoMin: configAtiva.value.tamanhoMin, tamanhoMax: configAtiva.value.tamanhoMax,
+                esquadroMin: configAtiva.value.esquadroMin, esquadroMax: configAtiva.value.esquadroMax
+            };
 
             // Resultado: só avalia seções que têm dados preenchidos
             let resultadoGeral = 'Aprovado';
@@ -626,7 +631,22 @@ createApp({
             reportText.value = txt;
             notify('Sucesso', 'Relatório gerado!', 'sucesso');
         };
-        const getStatusRelatorio = (relatorio, valor, tipo) => { if (valor === null || valor === undefined || valor === '') return true; const num = parseFloat(valor); const limites = relatorio.limitesSnapshot || cadastros.value.formatos.find(f => f.id === relatorio.formatoId) || { latMin: -99, latMax: 99, centMin: -99, centMax: 99 }; const min = tipo === 'lateral' ? limites.latMin : limites.centMin; const max = tipo === 'lateral' ? limites.latMax : limites.centMax; return (num >= min && num <= max); };
+        const getStatusRelatorio = (relatorio, valor, tipo) => {
+            if (valor === null || valor === undefined || valor === '') return true;
+            const num = parseFloat(valor);
+            if (tipo === 'tamanho' || tipo === 'esquadro') {
+                const fmt = cadastros.value.formatos.find(f => f.id === relatorio.formatoId);
+                if (!fmt) return true;
+                const min = tipo === 'tamanho' ? fmt.tamanhoMin : fmt.esquadroMin;
+                const max = tipo === 'tamanho' ? fmt.tamanhoMax : fmt.esquadroMax;
+                if (min === undefined || max === undefined) return true;
+                return num >= min && num <= max;
+            }
+            const limites = relatorio.limitesSnapshot || cadastros.value.formatos.find(f => f.id === relatorio.formatoId) || { latMin: -99, latMax: 99, centMin: -99, centMax: 99 };
+            const min = tipo === 'lateral' ? limites.latMin : limites.centMin;
+            const max = tipo === 'lateral' ? limites.latMax : limites.centMax;
+            return (num >= min && num <= max);
+        };
         const configAtiva = computed(() => cadastros.value.formatos.find(f => f.id === form.value.formatoId) || { nome: '...', latMin: -99, latMax: 99, centMin: -99, centMax: 99 });
         const getStatusClass = (val, tipo) => { if (val == null || val === '') return ''; const min = tipo === 'lateral' ? configAtiva.value.latMin : configAtiva.value.centMin; const max = tipo === 'lateral' ? configAtiva.value.latMax : configAtiva.value.centMax; return (val >= min && val <= max) ? 'status-ok' : 'status-bad'; };
         const focarProximoInput = (el) => { const inputs = Array.from(document.querySelectorAll('.input-medicao')); const idx = inputs.indexOf(el); if (idx > -1 && idx < inputs.length - 1) inputs[idx + 1].focus(); };
