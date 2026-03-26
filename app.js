@@ -623,11 +623,6 @@ createApp({
                 });
             }
 
-            // ── RESULTADO FINAL ──
-            txt += `\n*━━━━━━━━━━━━━━━━━━━━*\n`;
-            txt += `*RESULTADO: ${resultadoFinal}*\n`;
-            txt += `*━━━━━━━━━━━━━━━━━━━━*`;
-
             reportText.value = txt;
             notify('Sucesso', 'Relatório gerado!', 'sucesso');
         };
