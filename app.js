@@ -438,28 +438,158 @@ createApp({
         };
         
         const mascararInput = (event, pecaObj, tipo, chave) => { let input = event.target; let valorOriginal = input.value; let isNegative = valorOriginal.includes('-'); let numeros = valorOriginal.replace(/\D/g, ''); let digitosReais = numeros.replace(/^0+/, ''); let valorVisual = ''; let valorFloat = 0; if (numeros.length > 0) { valorFloat = parseInt(numeros) / 100; valorVisual = valorFloat.toFixed(2).replace('.', ','); } if (isNegative) { valorVisual = '-' + valorVisual; valorFloat = valorFloat * -1; } if (numeros.length === 0 && !isNegative) { valorVisual = ''; valorFloat = null; } else if (numeros.length === 0 && isNegative) { valorVisual = '-'; } if (tipo === 'laterais') { pecaObj.lateraisDisplay[chave] = valorVisual; pecaObj.laterais[chave] = valorFloat; } else { pecaObj.centraisDisplay[chave] = valorVisual; pecaObj.centrais[chave] = valorFloat; } input.value = valorVisual; if (digitosReais.length >= 3) focarProximoInput(input); salvarRascunho(); };
-        const salvarRascunho = async () => { if (!form.value.formatoId || showStartModal.value) return; salvandoAuto.value = true; const limitesSnapshot = { latMin: configAtiva.value.latMin, latMax: configAtiva.value.latMax, centMin: configAtiva.value.centMin, centMax: configAtiva.value.centMax }; let resultadoGeral = 'Aprovado'; form.value.pecas.forEach(p => { Object.values(p.laterais).forEach(v => { if(getStatusClass(v, 'lateral') === 'status-bad') resultadoGeral = 'Reprovado'; }); Object.values(p.centrais).forEach(v => { if(getStatusClass(v, 'central') === 'status-bad') resultadoGeral = 'Reprovado'; }); }); if (resultadoEspessura.value === 'Reprovado') resultadoGeral = 'Reprovado'; if (resultadoTamanhoEsquadro.value === 'Reprovado') resultadoGeral = 'Reprovado'; const dados = { inspetor: loginData.value.user, dataHora: new Date(), linha: form.value.linha, produto: form.value.produto, formatoId: form.value.formatoId, formatoNome: configAtiva.value.nome, limitesSnapshot: limitesSnapshot, lote: form.value.lote ? form.value.lote.toUpperCase() : '', posFolga: form.value.posFolga, resultado: resultadoGeral, pecas: form.value.pecas.map(p => ({ laterais: p.laterais, centrais: p.centrais })), espessuraDeclarada: form.value.espessuraDeclarada || null, pecasEspessura: form.value.pecasEspessura.map(p => ({ prensa: p.prensa, cavidade: p.cavidade, pontos: p.pontos, media: calcMediaPecaEspessura(p) })), medicoesTamanhoEsquadro: form.value.medicoesTamanhoEsquadro, status: 'rascunho' }; try { if (currentInspectionId.value) { await updateDoc(doc(db, "inspecoes", currentInspectionId.value), dados); } else { const ref = await addDoc(collection(db, "inspecoes"), dados); currentInspectionId.value = ref.id; } } catch (e) { console.error(e); } finally { setTimeout(() => salvandoAuto.value = false, 500); } };
-        const gerarRelatorioFinal = async () => { if (!form.value.linha || !form.value.produto || !form.value.formatoId) { notify('Erro', 'Cabeçalho incompleto.', 'erro'); return; } if (!form.value.posFolga) { notify('Atenção', 'Preencha se é Pós Folga.', 'erro'); return; } await salvarRascunho(); if(currentInspectionId.value) await updateDoc(doc(db, "inspecoes", currentInspectionId.value), { status: 'finalizado' }); const now = new Date(); const dataStr = now.toLocaleDateString('pt-BR'); const conf = configAtiva.value; let txt = `*RELATÓRIO DE EMPENO*\n*Data:* ${dataStr} ${now.toLocaleTimeString().slice(0,5)}\n*Responsável:* ${loginData.value.user}\n`; if (form.value.posFolga === 'Sim') txt += `*Pós Folga:* Sim\n`; txt += `*Linha:* ${form.value.linha}\n*Produto:* ${form.value.produto}\n*Formato:* ${conf.nome}\n*Lote:* ${form.value.lote}\n\nRange Lateral:(${conf.latMin} a ${conf.latMax})\nRange Central:(${conf.centMin} a ${conf.centMax})\n\n`; form.value.pecas.forEach((p, i) => { txt += `*Peça ${i+1}*\n`; ['A', 'B', 'C', 'D'].forEach(lado => { const val = p.laterais[lado]; const visual = p.lateraisDisplay[lado]; if (val !== null && val !== '') { const icon = getStatusClass(val, 'lateral') === 'status-ok' ? '🟢' : '🔴'; txt += `${icon} Lado ${lado}: ${visual}\n`; } }); txt += `*Central*\n`; [1, 2].forEach(num => { const val = p.centrais[num]; const visual = p.centraisDisplay[num]; const label = num === 1 ? 'Lado A' : 'Lado B'; if (val !== null && val !== '') { const icon = getStatusClass(val, 'central') === 'status-ok' ? '🟢' : '🔴'; txt += `${icon} ${label}: ${visual}\n`; } }); txt += `\n`; });
-            if (form.value.espessuraDeclarada) {
-                txt += `\n*ESPESSURA*\n*Declarada:* ${form.value.espessuraDeclarada}mm | Range: ${espessuraMin.value?.toFixed(2)} – ${espessuraMax.value?.toFixed(2)}mm\n`;
-                form.value.pecasEspessura.forEach((p, i) => {
+
+        // ─── DETECTORES DE DADOS PREENCHIDOS ────────────────────────────────────
+        // Cada seção só é considerada se tiver ao menos um valor real preenchido.
+
+        const temDadosEmpeno = computed(() => {
+            return form.value.pecas.some(p =>
+                Object.values(p.laterais).some(v => v !== null && v !== '') ||
+                Object.values(p.centrais).some(v => v !== null && v !== '')
+            );
+        });
+
+        const temDadosEspessura = computed(() => {
+            if (!form.value.espessuraDeclarada) return false;
+            return form.value.pecasEspessura.some(p =>
+                (p.pontos || []).some(v => v !== null && v !== '' && !isNaN(parseFloat(v)))
+            );
+        });
+
+        const temDadosTamanhoEsquadro = computed(() => {
+            return form.value.medicoesTamanhoEsquadro.some(m =>
+                (m.tamanho !== null && m.tamanho !== '') ||
+                (m.esquadro !== null && m.esquadro !== '')
+            );
+        });
+
+        // ─── SALVAR RASCUNHO (inteligente) ───────────────────────────────────────
+        const salvarRascunho = async () => {
+            if (!form.value.formatoId || showStartModal.value) return;
+            salvandoAuto.value = true;
+
+            const limitesSnapshot = { latMin: configAtiva.value.latMin, latMax: configAtiva.value.latMax, centMin: configAtiva.value.centMin, centMax: configAtiva.value.centMax };
+
+            // Resultado: só avalia seções que têm dados preenchidos
+            let resultadoGeral = 'Aprovado';
+            if (temDadosEmpeno.value) {
+                form.value.pecas.forEach(p => {
+                    Object.values(p.laterais).forEach(v => { if (getStatusClass(v, 'lateral') === 'status-bad') resultadoGeral = 'Reprovado'; });
+                    Object.values(p.centrais).forEach(v => { if (getStatusClass(v, 'central') === 'status-bad') resultadoGeral = 'Reprovado'; });
+                });
+            }
+            if (temDadosEspessura.value && resultadoEspessura.value === 'Reprovado') resultadoGeral = 'Reprovado';
+            if (temDadosTamanhoEsquadro.value && resultadoTamanhoEsquadro.value === 'Reprovado') resultadoGeral = 'Reprovado';
+
+            // Monta payload: só inclui seções com dados
+            const dados = {
+                inspetor: loginData.value.user, dataHora: new Date(),
+                linha: form.value.linha, produto: form.value.produto,
+                formatoId: form.value.formatoId, formatoNome: configAtiva.value.nome,
+                limitesSnapshot, lote: form.value.lote ? form.value.lote.toUpperCase() : '',
+                posFolga: form.value.posFolga, resultado: resultadoGeral,
+                // Empeno: inclui sempre (estrutura base), mas marca se tem dados
+                pecas: form.value.pecas.map(p => ({ laterais: p.laterais, centrais: p.centrais })),
+                temDadosEmpeno: temDadosEmpeno.value,
+                // Espessura: só salva se tiver dado real
+                espessuraDeclarada: temDadosEspessura.value ? (form.value.espessuraDeclarada || null) : null,
+                pecasEspessura: temDadosEspessura.value
+                    ? form.value.pecasEspessura
+                        .filter(p => (p.pontos || []).some(v => v !== null && v !== '' && !isNaN(parseFloat(v))))
+                        .map(p => ({ prensa: p.prensa, cavidade: p.cavidade, pontos: p.pontos.filter(v => v !== null && v !== ''), media: calcMediaPecaEspessura(p) }))
+                    : [],
+                // Tamanho & Esquadro: só salva medições com ao menos um valor
+                medicoesTamanhoEsquadro: temDadosTamanhoEsquadro.value
+                    ? form.value.medicoesTamanhoEsquadro.filter(m => (m.tamanho !== null && m.tamanho !== '') || (m.esquadro !== null && m.esquadro !== ''))
+                    : [],
+                status: 'rascunho'
+            };
+
+            try {
+                if (currentInspectionId.value) { await updateDoc(doc(db, "inspecoes", currentInspectionId.value), dados); }
+                else { const ref = await addDoc(collection(db, "inspecoes"), dados); currentInspectionId.value = ref.id; }
+            } catch (e) { console.error(e); }
+            finally { setTimeout(() => salvandoAuto.value = false, 500); }
+        };
+
+        // ─── GERAR RELATÓRIO FINAL (inteligente) ─────────────────────────────────
+        const gerarRelatorioFinal = async () => {
+            if (!form.value.linha || !form.value.produto || !form.value.formatoId) { notify('Erro', 'Cabeçalho incompleto.', 'erro'); return; }
+            if (!form.value.posFolga) { notify('Atenção', 'Preencha se é Pós Folga.', 'erro'); return; }
+
+            // Exige pelo menos uma seção com dados
+            if (!temDadosEmpeno.value && !temDadosEspessura.value && !temDadosTamanhoEsquadro.value) {
+                notify('Atenção', 'Nenhuma medição foi preenchida.', 'erro'); return;
+            }
+
+            await salvarRascunho();
+            if (currentInspectionId.value) await updateDoc(doc(db, "inspecoes", currentInspectionId.value), { status: 'finalizado' });
+
+            const now = new Date();
+            const conf = configAtiva.value;
+            let txt = `*RELATÓRIO DE QUALIDADE*\n*Data:* ${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString().slice(0,5)}\n*Responsável:* ${loginData.value.user}\n`;
+            if (form.value.posFolga === 'Sim') txt += `*Pós Folga:* Sim\n`;
+            txt += `*Linha:* ${form.value.linha}\n*Produto:* ${form.value.produto}\n*Formato:* ${conf.nome}\n*Lote:* ${form.value.lote}\n`;
+
+            // ── SEÇÃO EMPENO (só se tiver dados) ──
+            if (temDadosEmpeno.value) {
+                txt += `\n━━ EMPENO ━━\n`;
+                txt += `Range Lateral: ${conf.latMin} a ${conf.latMax} | Range Central: ${conf.centMin} a ${conf.centMax}\n\n`;
+                form.value.pecas.forEach((p, i) => {
+                    const lateraisPreenchidos = ['A','B','C','D'].filter(l => p.laterais[l] !== null && p.laterais[l] !== '');
+                    const centraisPreenchidos = [1,2].filter(c => p.centrais[c] !== null && p.centrais[c] !== '');
+                    if (!lateraisPreenchidos.length && !centraisPreenchidos.length) return; // pula peças vazias
+                    txt += `*Peça ${i+1}*\n`;
+                    lateraisPreenchidos.forEach(lado => {
+                        const val = p.laterais[lado]; const visual = p.lateraisDisplay[lado];
+                        const icon = getStatusClass(val, 'lateral') === 'status-ok' ? '🟢' : '🔴';
+                        txt += `${icon} Lat ${lado}: ${visual}\n`;
+                    });
+                    if (centraisPreenchidos.length) {
+                        centraisPreenchidos.forEach(num => {
+                            const val = p.centrais[num]; const visual = p.centraisDisplay[num];
+                            const label = num === 1 ? 'Lado A' : 'Lado B';
+                            const icon = getStatusClass(val, 'central') === 'status-ok' ? '🟢' : '🔴';
+                            txt += `${icon} Cent ${label}: ${visual}\n`;
+                        });
+                    }
+                    txt += `\n`;
+                });
+            }
+
+            // ── SEÇÃO ESPESSURA (só se tiver dados) ──
+            if (temDadosEspessura.value) {
+                txt += `\n━━ ESPESSURA ━━\n`;
+                txt += `Declarada: ${form.value.espessuraDeclarada}mm | Range: ${espessuraMin.value?.toFixed(3)} – ${espessuraMax.value?.toFixed(3)}mm\n\n`;
+                form.value.pecasEspessura.forEach(p => {
+                    const pontosValidos = (p.pontos || []).filter(v => v !== null && v !== '' && !isNaN(parseFloat(v)));
+                    if (!pontosValidos.length) return; // pula peças sem pontos
                     const med = calcMediaPecaEspessura(p);
                     const icon = med !== null ? (getStatusEspessura(med) === 'status-ok' ? '🟢' : '🔴') : '⚪';
-                    const pontosStr = p.pontos.map((v, pi) => `P${pi+1}=${v ?? '-'}`).join(' | ');
-                    txt += `${icon} Prensa ${p.prensa}${p.cavidade ? ` / Cav ${p.cavidade}` : ''}: ${pontosStr} → Média=${med !== null ? med.toFixed(2) : '-'}mm\n`;
+                    const id = [p.prensa ? `Prensa ${p.prensa}` : '', p.cavidade ? `Cav ${p.cavidade}` : ''].filter(Boolean).join(' / ') || 'Peça';
+                    const pontosStr = pontosValidos.map((v, pi) => `P${pi+1}=${parseFloat(v).toFixed(3)}`).join(' | ');
+                    txt += `${icon} ${id}: ${pontosStr} → Média=${med !== null ? med.toFixed(3) : '-'}mm\n`;
                 });
             }
-            if (form.value.medicoesTamanhoEsquadro.length) {
-                const fmt = configAtiva.value;
-                txt += `\n*TAMANHO & ESQUADRO*\n`;
-                if (fmt.tamanhoMin !== undefined) txt += `Range Tam.: ${fmt.tamanhoMin} – ${fmt.tamanhoMax} | Range Esq.: ${fmt.esquadroMin} – ${fmt.esquadroMax}\n`;
+
+            // ── SEÇÃO TAMANHO & ESQUADRO (só se tiver dados) ──
+            if (temDadosTamanhoEsquadro.value) {
+                txt += `\n━━ TAMANHO & ESQUADRO ━━\n`;
+                if (conf.tamanhoMin !== undefined) txt += `Range Tam.: ${conf.tamanhoMin} – ${conf.tamanhoMax} | Range Esq.: ${conf.esquadroMin} – ${conf.esquadroMax}\n\n`;
                 form.value.medicoesTamanhoEsquadro.forEach((m, i) => {
-                    const stT = getStatusTamanho(m.tamanho) === 'status-ok' ? '🟢' : '🔴';
-                    const stE = getStatusEsquadro(m.esquadro) === 'status-ok' ? '🟢' : '🔴';
-                    txt += `Medição ${i+1}${m.retifica ? ` (Retífica ${m.retifica})` : ''}: ${stT} Tam=${m.tamanho ?? '-'} | ${stE} Esq=${m.esquadro ?? '-'}\n`;
+                    const temTam = m.tamanho !== null && m.tamanho !== '';
+                    const temEsq = m.esquadro !== null && m.esquadro !== '';
+                    if (!temTam && !temEsq) return; // pula medições vazias
+                    const retLabel = m.retifica ? ` (Ret. ${m.retifica})` : '';
+                    txt += `Medição ${i+1}${retLabel}:\n`;
+                    if (temTam) { const icon = getStatusTamanho(m.tamanho) === 'status-ok' ? '🟢' : '🔴'; txt += `  ${icon} Tamanho: ${m.tamanho}mm\n`; }
+                    if (temEsq) { const icon = getStatusEsquadro(m.esquadro) === 'status-ok' ? '🟢' : '🔴'; txt += `  ${icon} Esquadro: ${m.esquadro}mm\n`; }
                 });
             }
-            reportText.value = txt; notify('Sucesso', 'Gerado.', 'sucesso'); };
+
+            reportText.value = txt;
+            notify('Sucesso', 'Relatório gerado com sucesso!', 'sucesso');
+        };
         const getStatusRelatorio = (relatorio, valor, tipo) => { if (valor === null || valor === undefined || valor === '') return true; const num = parseFloat(valor); const limites = relatorio.limitesSnapshot || cadastros.value.formatos.find(f => f.id === relatorio.formatoId) || { latMin: -99, latMax: 99, centMin: -99, centMax: 99 }; const min = tipo === 'lateral' ? limites.latMin : limites.centMin; const max = tipo === 'lateral' ? limites.latMax : limites.centMax; return (num >= min && num <= max); };
         const configAtiva = computed(() => cadastros.value.formatos.find(f => f.id === form.value.formatoId) || { nome: '...', latMin: -99, latMax: 99, centMin: -99, centMax: 99 });
         const getStatusClass = (val, tipo) => { if (val == null || val === '') return ''; const min = tipo === 'lateral' ? configAtiva.value.latMin : configAtiva.value.centMin; const max = tipo === 'lateral' ? configAtiva.value.latMax : configAtiva.value.centMax; return (val >= min && val <= max) ? 'status-ok' : 'status-bad'; };
@@ -575,6 +705,8 @@ createApp({
             formatarData, copiarTexto, enviarZap, stats, novoUsuarioForm, cadastrarUsuario, setFiltroRapido,
             produtoSearch, produtosFiltrados, selecionarProduto, mostrandoListaProdutos, filtroAdminProdutos, produtosAdminFiltrados,
             isDarkMode, toggleDarkMode, filtrosGrafico, showStartModal, iniciarAnalise, tipoGrafico,
+            // Detectores de dados
+            temDadosEmpeno, temDadosEspessura, temDadosTamanhoEsquadro,
             // Espessura
             inspectorTab, espessuraMin, espessuraMax,
             calcMediaPecaEspessura, getStatusEspessura, resultadoEspessura,
