@@ -962,10 +962,175 @@ createApp({
         const atualizarItemSimples = async (collectionName, item) => { const nomeTrimmed = item.nome.trim(); const existe = cadastros.value[collectionName].some(i => i.nome.toLowerCase() === nomeTrimmed.toLowerCase() && i.id !== item.id); if (existe) { notify('Atenção', 'Já existe um item com este nome.', 'erro'); return; } try { await updateDoc(doc(db, collectionName, item.id), {nome: nomeTrimmed}); } catch(e) { notify('Erro', 'Falha ao atualizar.', 'erro'); } };
         const atualizarFormato = async (f) => { const {id,...d}=f; await updateDoc(doc(db,"formatos",id),d); };
         const removerItem = async (c, id) => { if(confirm("Excluir?")) deleteDoc(doc(db,c,id)); };
+        const copiarTextoDim = () => navigator.clipboard.writeText(dimReportText.value).then(() => notify('Copiado', 'Texto copiado!', 'sucesso'));
+        const enviarZapDim = () => window.open(`https://wa.me/?text=${encodeURIComponent(dimReportText.value)}`, '_blank');
+
+        // ── Gerar HTML interno do card para imagem/PDF ────────────────────────
+        const gerarHTMLCardDim = () => {
+            const rel = {
+                nomeInspetor: loginData.value.nome || loginData.value.user,
+                dataHora: new Date(),
+                linha: formDim.value.linha,
+                produto: formDim.value.produto,
+                formatoNome: configDimAtiva.value.nome,
+                lote: formDim.value.lote,
+                espessuraDeclarada: formDim.value.espessuraDeclarada,
+                pecasEspessura: formDim.value.pecasEspessura,
+                medicoesTamanhoEsquadro: formDim.value.medicoesTamanhoEsquadro,
+                limitesSnapshot: {
+                    tamanhoMin: configDimAtiva.value.tamanhoMin, tamanhoMax: configDimAtiva.value.tamanhoMax,
+                    esquadroMin: configDimAtiva.value.esquadroMin, esquadroMax: configDimAtiva.value.esquadroMax
+                }
+            };
+            const dataStr = rel.dataHora.toLocaleDateString('pt-BR') + ' ' + rel.dataHora.toLocaleTimeString('pt-BR').slice(0,5);
+            const aprovado = (resultadoEspessuraDim.value !== 'Reprovado' && resultadoTEDim.value !== 'Reprovado');
+
+            let html = `<div style="border-bottom:2px solid #7c3aed;padding-bottom:14px;margin-bottom:20px;">
+                <div style="font-size:20px;font-weight:900;color:#7c3aed;margin-bottom:6px;">📐 ANÁLISE DIMENSIONAL</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:12px;color:#475569;">
+                    <span><b>Data:</b> ${dataStr}</span><span><b>Inspetor:</b> ${rel.nomeInspetor}</span>
+                    <span><b>Linha:</b> ${rel.linha}</span><span><b>Formato:</b> ${rel.formatoNome}</span>
+                    <span><b>Produto:</b> ${rel.produto}</span><span><b>Lote:</b> ${rel.lote}</span>
+                </div></div>`;
+
+            // Espessura
+            if (temDadosEspessuraDim.value && rel.espessuraDeclarada) {
+                const eMin = +(rel.espessuraDeclarada * 0.95).toFixed(3);
+                const eMax = +(rel.espessuraDeclarada * 1.05).toFixed(3);
+                html += `<div style="margin-bottom:16px;"><div style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;border-bottom:1px solid #ede9fe;padding-bottom:4px;">Espessura — Declarada: ${rel.espessuraDeclarada}mm | Range: ${eMin}–${eMax}mm</div>`;
+                rel.pecasEspessura.forEach((p, i) => {
+                    const pontosValidos = (p.pontos||[]).filter(v => v !== null && v !== '');
+                    if (!pontosValidos.length) return;
+                    const med = calcMediaPecaDim(p);
+                    const ok = med !== null && med >= eMin && med <= eMax;
+                    const id = [p.prensa ? `Prensa ${p.prensa}` : '', p.cavidade ? `Cav ${p.cavidade}` : ''].filter(Boolean).join(' / ') || `Peça ${i+1}`;
+                    html += `<div style="background:${ok ? '#f0fdf4' : '#fef2f2'};border:1px solid ${ok ? '#bbf7d0' : '#fecaca'};border-radius:8px;padding:8px 12px;margin-bottom:6px;">
+                        <div style="font-weight:700;font-size:12px;color:${ok ? '#166534' : '#991b1b'}">${ok ? '✅' : '❌'} ${id} — Média: ${med !== null ? med.toFixed(3) : '-'}mm</div>
+                        <div style="font-size:11px;color:#64748b;margin-top:2px;">${pontosValidos.map((v,pi) => `P${pi+1}: ${parseFloat(v).toFixed(3)}mm`).join('  |  ')}</div>
+                    </div>`;
+                });
+                html += `</div>`;
+            }
+
+            // Tamanho & Esquadro
+            if (temDadosTEDim.value) {
+                const ls = rel.limitesSnapshot;
+                html += `<div style="margin-bottom:16px;"><div style="font-size:11px;font-weight:700;color:#ea580c;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;border-bottom:1px solid #ffedd5;padding-bottom:4px;">Tamanho & Esquadro${ls.tamanhoMin !== undefined ? ` — Tam: ${ls.tamanhoMin}–${ls.tamanhoMax} | Esq: ${ls.esquadroMin}–${ls.esquadroMax}` : ''}</div>`;
+                rel.medicoesTamanhoEsquadro.forEach((m, i) => {
+                    const tt = m.tamanho !== null && m.tamanho !== ''; const te = m.esquadro !== null && m.esquadro !== '';
+                    if (!tt && !te) return;
+                    const okT = tt && ls.tamanhoMin !== undefined ? parseFloat(m.tamanho) >= ls.tamanhoMin && parseFloat(m.tamanho) <= ls.tamanhoMax : true;
+                    const okE = te && ls.esquadroMin !== undefined ? parseFloat(m.esquadro) >= ls.esquadroMin && parseFloat(m.esquadro) <= ls.esquadroMax : true;
+                    html += `<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:8px 12px;margin-bottom:6px;">
+                        <div style="font-weight:700;font-size:12px;color:#9a3412;">Medição ${i+1}${m.retifica ? ' — Ret. ' + m.retifica : ''}</div>
+                        <div style="font-size:12px;margin-top:4px;display:flex;gap:16px;">
+                            ${tt ? `<span>${okT ? '✅' : '❌'} Tamanho: <b>${m.tamanho}mm</b></span>` : ''}
+                            ${te ? `<span>${okE ? '✅' : '❌'} Esquadro: <b>${m.esquadro}mm</b></span>` : ''}
+                        </div></div>`;
+                });
+                html += `</div>`;
+            }
+
+            // Resultado
+            html += `<div style="margin-top:20px;padding:14px;border-radius:10px;text-align:center;font-size:18px;font-weight:900;background:${aprovado ? '#f0fdf4' : '#fef2f2'};color:${aprovado ? '#166534' : '#991b1b'};border:2px solid ${aprovado ? '#86efac' : '#fca5a5'};">
+                RESULTADO: ${aprovado ? 'APROVADO ✅' : 'REPROVADO ❌'}
+            </div>
+            <div style="margin-top:14px;font-size:10px;color:#94a3b8;text-align:right;">QualityControl — Empeno Pro</div>`;
+
+            return html;
+        };
+
+        // ── Baixar imagem ─────────────────────────────────────────────────────
+        const baixarImagemDim = async () => {
+            const btn = document.getElementById('btn-img-dim');
+            if (btn) btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-xl"></i>';
+            try {
+                const card = document.getElementById('dim-print-card');
+                card.innerHTML = gerarHTMLCardDim();
+                card.style.display = 'block';
+                await nextTick();
+                const canvas = await html2canvas(card, { backgroundColor: '#ffffff', scale: 2, windowWidth: 620 });
+                card.style.display = 'none';
+                const now = new Date();
+                const fileName = `Dimensional_${formDim.value.lote || 'sem_lote'}_${now.toLocaleDateString('pt-BR').replace(/\//g,'-')}.png`;
+                const link = document.createElement('a'); link.download = fileName; link.href = canvas.toDataURL('image/png'); link.click();
+                notify('Sucesso', 'Imagem gerada!', 'sucesso');
+            } catch(e) { console.error(e); notify('Erro', 'Falha ao gerar imagem.', 'erro'); }
+            finally { if (btn) btn.innerHTML = '<i class="ph-fill ph-image text-xl text-violet-500"></i> Imagem'; }
+        };
+
+        // ── Baixar PDF ────────────────────────────────────────────────────────
+        const baixarPDFDim = () => {
+            const now = new Date();
+            const dataStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR').slice(0,5);
+            const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Dimensional</title>
+            <style>body{margin:0;padding:32px;font-family:Arial,sans-serif;font-size:13px;color:#1e293b;}
+            @media print{body{padding:20px;} .no-print{display:none;} @page{margin:1cm;}}</style></head>
+            <body>${gerarHTMLCardDim()}
+            <script>window.onload=function(){window.print();}<\/script></body></html>`;
+            const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const win = window.open(url, '_blank');
+            if (!win) notify('Atenção', 'Permita pop-ups para gerar o PDF.', 'info');
+            notify('PDF', 'Use "Salvar como PDF" no diálogo de impressão.', 'info');
+        };
+
+        // ── Baixar CSV ────────────────────────────────────────────────────────
+        const baixarCSVDim = () => {
+            try {
+                const now = new Date();
+                const dataStr = now.toLocaleDateString('pt-BR');
+                const horaStr = now.toLocaleTimeString('pt-BR').slice(0,5);
+                let csv = '\uFEFF'; // BOM UTF-8
+
+                // Cabeçalho geral
+                csv += `Data;Hora;Inspetor;Linha;Produto;Formato;Lote;Resultado\n`;
+                const aprovado = resultadoEspessuraDim.value !== 'Reprovado' && resultadoTEDim.value !== 'Reprovado';
+                csv += `"${dataStr}";"${horaStr}";"${loginData.value.nome || loginData.value.user}";"${formDim.value.linha}";"${formDim.value.produto}";"${configDimAtiva.value.nome}";"${formDim.value.lote}";"${aprovado ? 'Aprovado' : 'Reprovado'}"\n\n`;
+
+                // Espessura
+                if (temDadosEspessuraDim.value) {
+                    const eMin = +(formDim.value.espessuraDeclarada * 0.95).toFixed(3);
+                    const eMax = +(formDim.value.espessuraDeclarada * 1.05).toFixed(3);
+                    csv += `ESPESSURA\nDeclarada;${formDim.value.espessuraDeclarada}mm;Min;${eMin};Max;${eMax}\n`;
+                    csv += `Peça;Prensa;Cavidade;${Array.from({length:10},(_,i)=>'Ponto '+(i+1)).join(';')};Média;Status\n`;
+                    formDim.value.pecasEspessura.forEach((p, i) => {
+                        const pontos = (p.pontos||[]).filter(v => v !== null && v !== '');
+                        if (!pontos.length) return;
+                        const med = calcMediaPecaDim(p);
+                        const ok = med !== null && med >= eMin && med <= eMax;
+                        const pontosStr = pontos.map(v => parseFloat(v).toFixed(3)).join(';');
+                        csv += `"Peça ${i+1}";"${p.prensa||''}";"${p.cavidade||''}";${pontosStr};"${med !== null ? med.toFixed(3) : ''}";"${ok ? 'Aprovado' : 'Reprovado'}"\n`;
+                    });
+                    csv += `\n`;
+                }
+
+                // Tamanho & Esquadro
+                if (temDadosTEDim.value) {
+                    const ls = { tamanhoMin: configDimAtiva.value.tamanhoMin, tamanhoMax: configDimAtiva.value.tamanhoMax, esquadroMin: configDimAtiva.value.esquadroMin, esquadroMax: configDimAtiva.value.esquadroMax };
+                    csv += `TAMANHO & ESQUADRO\n`;
+                    if (ls.tamanhoMin !== undefined) csv += `Range Tamanho;${ls.tamanhoMin};${ls.tamanhoMax};Range Esquadro;${ls.esquadroMin};${ls.esquadroMax}\n`;
+                    csv += `Medição;Retífica;Tamanho (mm);Status Tamanho;Esquadro (mm);Status Esquadro\n`;
+                    formDim.value.medicoesTamanhoEsquadro.forEach((m, i) => {
+                        const tt = m.tamanho !== null && m.tamanho !== ''; const te = m.esquadro !== null && m.esquadro !== '';
+                        if (!tt && !te) return;
+                        const okT = tt && ls.tamanhoMin !== undefined ? parseFloat(m.tamanho) >= ls.tamanhoMin && parseFloat(m.tamanho) <= ls.tamanhoMax : null;
+                        const okE = te && ls.esquadroMin !== undefined ? parseFloat(m.esquadro) >= ls.esquadroMin && parseFloat(m.esquadro) <= ls.esquadroMax : null;
+                        csv += `"Medição ${i+1}";"${m.retifica||''}";"${tt ? m.tamanho : ''}";"${okT !== null ? (okT ? 'Aprovado' : 'Reprovado') : ''}";"${te ? m.esquadro : ''}";"${okE !== null ? (okE ? 'Aprovado' : 'Reprovado') : ''}"\n`;
+                    });
+                }
+
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `Dimensional_${formDim.value.lote || 'sem_lote'}_${now.toLocaleDateString('pt-BR').replace(/\//g,'-')}.csv`;
+                link.click(); URL.revokeObjectURL(link.href);
+                notify('Sucesso', 'CSV exportado!', 'sucesso');
+            } catch(e) { console.error(e); notify('Erro', 'Falha ao gerar CSV.', 'erro'); }
+        };
+
         const copiarTexto = () => navigator.clipboard.writeText(reportText.value);
         const enviarZap = () => window.open(`https://wa.me/?text=${encodeURIComponent(reportText.value)}`, '_blank');
-
-        onMounted(() => {
             const loader = document.getElementById('initial-loader');
             if (loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 500); }
             const savedTheme = localStorage.getItem('theme');
@@ -1025,7 +1190,8 @@ createApp({
             getStatusTamanhoDim, getStatusEsquadroDim, adicionarMedicaoTEDim, removerMedicaoTEDim,
             resultadoTEDim, temDadosTEDim,
             salvarDimRascunho, concluirDimensionais, novoDimLimpo,
-            dimSelecionadoModal, filtrosDimAdmin, dimensionaisFiltrados, removerDimensional
+            dimSelecionadoModal, filtrosDimAdmin, dimensionaisFiltrados, removerDimensional,
+            copiarTextoDim, enviarZapDim, baixarImagemDim, baixarPDFDim, baixarCSVDim
         };
     }
 }).mount('#app');
