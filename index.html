@@ -699,18 +699,21 @@
         <div v-else-if="currentView === 'dimensionais'" class="flex flex-col h-screen relative">
             <header class="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 px-4 py-3 shadow-sm flex justify-between items-center z-20">
                 <div class="flex items-center gap-2 font-bold text-gray-800 dark:text-white">
-                    <button v-if="loginData.perfil === 'admin'" @click="voltarAdminDeDim" class="mr-2 text-gray-500 hover:text-violet-500 transition-colors bg-gray-100 dark:bg-slate-800 p-1.5 rounded-lg">
+                    <button v-if="loginData.perfil === 'admin'" @click="voltarAdminDeDim" class="mr-2 text-gray-500 hover:text-violet-500 transition-colors bg-gray-100 dark:bg-slate-800 p-1.5 rounded-lg" title="Voltar ao Painel">
                         <i class="ph-bold ph-arrow-left text-lg"></i>
                     </button>
                     <i class="ph-fill ph-stack text-violet-600 text-xl"></i>
                     <span>Dimensionais</span>
                 </div>
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2">
+                    <button @click="irParaInspecao" class="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition">
+                        <i class="ph-fill ph-check-square"></i> <span class="hidden sm:inline">Empeno</span>
+                    </button>
                     <div class="text-xs text-right hidden sm:block">
                         <div class="font-bold text-gray-800 dark:text-white">{{ loginData.nome || loginData.user }}</div>
                         <div class="text-gray-400 uppercase tracking-widest text-[9px]">{{ loginData.perfil === 'admin' ? 'Administrador' : 'Inspetor' }}</div>
                     </div>
-                    <div v-if="salvandoDim" class="text-[10px] text-gray-400 flex items-center gap-1"><i class="ph ph-cloud-arrow-up animate-pulse"></i> Salvando...</div>
+                    <div v-if="salvandoDim" class="text-[10px] text-gray-400 flex items-center gap-1"><i class="ph ph-cloud-arrow-up animate-pulse"></i></div>
                     <button @click="logout" class="text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full"><i class="ph ph-sign-out text-xl"></i></button>
                 </div>
             </header>
@@ -854,15 +857,37 @@
         <!-- Modal relatório dimensional -->
         <div v-if="dimReportText" class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
             <div class="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md p-6 border dark:border-slate-800">
-                <h3 class="font-bold text-lg mb-4 text-violet-600 dark:text-violet-400">Dimensional Concluído!</h3>
-                <textarea class="w-full h-40 bg-gray-100 dark:bg-slate-950 dark:text-gray-300 p-3 text-xs font-mono rounded-lg mb-4 border dark:border-slate-800" readonly>{{ dimReportText }}</textarea>
-                <div class="grid grid-cols-2 gap-3">
-                    <button @click="navigator.clipboard.writeText(dimReportText)" class="btn-secondary">Copiar</button>
-                    <button @click="window.open('https://wa.me/?text=' + encodeURIComponent(dimReportText), '_blank')" class="btn-whatsapp">WhatsApp</button>
+                <h3 class="font-bold text-lg mb-1 text-violet-600 dark:text-violet-400 flex items-center gap-2"><i class="ph-fill ph-check-circle text-2xl"></i> Dimensional Concluído!</h3>
+                <p class="text-xs text-gray-400 mb-4">Escolha como exportar o relatório:</p>
+
+                <!-- Texto do relatório -->
+                <textarea id="dim-report-textarea" class="w-full h-32 bg-gray-100 dark:bg-slate-950 dark:text-gray-300 p-3 text-xs font-mono rounded-lg mb-4 border dark:border-slate-800" readonly>{{ dimReportText }}</textarea>
+
+                <!-- Exportar WhatsApp / Copiar -->
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <button @click="copiarTextoDim" class="btn-secondary flex items-center justify-center gap-1.5"><i class="ph-bold ph-copy"></i> Copiar Texto</button>
+                    <button @click="enviarZapDim" class="btn-whatsapp flex items-center justify-center gap-1.5"><i class="ph-bold ph-whatsapp-logo"></i> WhatsApp</button>
                 </div>
-                <button @click="novoDimLimpo" class="w-full mt-3 text-sm text-gray-500 dark:text-gray-400 underline">Fechar e Iniciar Nova</button>
+
+                <!-- Exportar Imagem / PDF / CSV -->
+                <div class="grid grid-cols-3 gap-2 mb-4">
+                    <button @click="baixarImagemDim" id="btn-img-dim" class="flex flex-col items-center gap-1 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 hover:bg-violet-50 dark:hover:bg-violet-900/20 hover:border-violet-300 transition text-gray-600 dark:text-gray-300 text-xs font-bold">
+                        <i class="ph-fill ph-image text-xl text-violet-500"></i> Imagem
+                    </button>
+                    <button @click="baixarPDFDim" class="flex flex-col items-center gap-1 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-300 transition text-gray-600 dark:text-gray-300 text-xs font-bold">
+                        <i class="ph-fill ph-file-pdf text-xl text-red-500"></i> PDF
+                    </button>
+                    <button @click="baixarCSVDim" class="flex flex-col items-center gap-1 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 transition text-gray-600 dark:text-gray-300 text-xs font-bold">
+                        <i class="ph-fill ph-file-csv text-xl text-emerald-500"></i> CSV
+                    </button>
+                </div>
+
+                <button @click="novoDimLimpo" class="w-full text-sm text-gray-500 dark:text-gray-400 hover:underline">Fechar e Iniciar Nova</button>
             </div>
         </div>
+
+        <!-- Card oculto para geração de imagem/PDF dimensional -->
+        <div id="dim-print-card" style="display:none; position:fixed; top:-9999px; left:0; width:620px; background:#fff; padding:36px; font-family:sans-serif; color:#1e293b; z-index:-1;"></div>
 
     </div>
 
