@@ -1131,6 +1131,8 @@ createApp({
 
         const copiarTexto = () => navigator.clipboard.writeText(reportText.value);
         const enviarZap = () => window.open(`https://wa.me/?text=${encodeURIComponent(reportText.value)}`, '_blank');
+
+        onMounted(() => {
             const loader = document.getElementById('initial-loader');
             if (loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 500); }
             const savedTheme = localStorage.getItem('theme');
